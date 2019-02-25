@@ -63,39 +63,46 @@ void display_menu(char *ip_address, int port)
 	printf("*************************************\n");
 }
 
+int create_socket(void)
+{
+    int server_socket;
+
+    if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+    {
+        perror("socket");
+        exit(-1);
+    }    
+    return (server_socket);
+}
+
+void connect_server(int connection_socket, char *ip_address, int port)
+{
+    struct sockaddr_in address;
+    
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);
+    address.sin_addr.s_addr = inet_addr(ip_address);;
+    if (connect(connection_socket, (struct sockaddr *) &address, sizeof(address)) == -1)
+    {
+            printf("Could not connect to server.\n");
+            exit(-1);
+    }
+}
+
 int main(int argc, char *argv[])
 {
-	int network_socket;
-	char *ip_address;
-	int port;
-	struct sockaddr_in address;
+	int connection_socket;
 	char buffer[256];
-
-	ft_memset(buffer, 0, sizeof(buffer));
 
 	if (argc < 3)
 		return (error("Usage: ./client server port", -1));
 
-	ip_address = argv[1];
-	port = ft_atoi(argv[2]);
+        connection_socket = create_socket();
+        connect_server(connection_socket, argv[1], ft_atoi(argv[2]));
 	
-	if ((network_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-	{
-		printf("Could not create socket.\n");
-		exit(-1);
-	}
+	ft_memset(buffer, 0, sizeof(buffer));
 
-	address.sin_family = AF_INET; // Same as the socket type.
-	address.sin_port = htons(port);
-	address.sin_addr.s_addr = inet_addr(ip_address);;
-
-	if (connect(network_socket, (struct sockaddr *) &address, sizeof(address)) == -1)
-	{
-		printf("Could not connect to server.\n");
-		exit(-1);
-	}
-
-	display_menu(ip_address, port);
+	display_menu(argv[1], ft_atoi(argv[2]));
 
 	while (1)
 	{	
@@ -105,26 +112,26 @@ int main(int argc, char *argv[])
 		char *command;
 		get_next_line(0, &command);
 
-		if (!validate_command(command))
+		if (validate_command(command) == 0)
 		{
-			close(network_socket);
+			close(connection_socket);
 			return (error("Not a valid command.", -1));
 		}
 		if (ft_strequ(command, "quit"))
 		{
-			send(network_socket, command, ft_strlen(command), 0);
-			recv(network_socket, &buffer, sizeof(buffer), 0);
+			send(connection_socket, command, ft_strlen(command), 0);
+			recv(connection_socket, &buffer, sizeof(buffer), 0);
 			printf("%s\n", buffer);
 			break;
 		}
 		else
 		{
-			send(network_socket, command, ft_strlen(command), 0);
+			send(connection_socket, command, ft_strlen(command), 0);
 			ft_memset(buffer, 0, sizeof(buffer));
-			recv(network_socket, &buffer, sizeof(buffer), 0);
+			recv(connection_socket, &buffer, sizeof(buffer), 0);
 			printf("The server sent: %s\n", buffer);
 		}
 	}
 
-	close(network_socket);
+	close(connection_socket);
 }
