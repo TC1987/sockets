@@ -6,7 +6,7 @@
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/02/18 07:34:15 by tcho              #+#    #+#             */
-/*   Updated: 2019/02/25 03:26:23 by tcho             ###   ########.fr       */
+/*   Updated: 2019/02/25 11:17:07 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,8 @@
 #include <netinet/in.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <string.h>
+#include <arpa/inet.h>
 #include "libft.h"
 
 int error(char *message, int code)
@@ -41,6 +43,7 @@ int do_get(char *command)
 }
 */
 
+// USE FT_STRNEQU INSTEAD.
 int do_op(char *command)
 {
 	if (!ft_strncmp(command, "ls", 2))
@@ -67,74 +70,104 @@ int do_op(char *command)
 	return (1);
 }
 
-
-
-int main(int argc, char *argv[])
+char *create_directory(void)
 {
-	char buffer[256];
-	char path[256];
-	int server_socket;
-	int client_socket;
-	int port;
-	struct sockaddr_in address;
+	char *path;
 
+	if ((path = malloc(sizeof(char) * 256)) == NULL)
+		return (NULL);
 	getcwd(path, sizeof(path));
-	ft_bzero(buffer, sizeof(buffer));
-
-	if (argc < 2)
-		return (error("Usage: ./server port", -1));
-
-
-	port = ft_atoi(argv[1]);
 	ft_strcat(path, "/root");
 	mkdir(path, 0700);
 	chdir(path);
+	return (path);
+}
 
+int create_socket(void)
+{
+	int server_socket;
+	int option_value;
 
 	if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
 	{
 		perror("socket");
 		exit(-1);
 	}
+	setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &option_value, sizeof(option_value));
+	return (server_socket);	
+}
 
-	// define the server address
+void bind_socket(int server_socket, int port)
+{
+	struct sockaddr_in address;
+
 	address.sin_family = AF_INET;
 	address.sin_port = htons(port);
 	address.sin_addr.s_addr = INADDR_ANY;
-
-	// bind the socket to a specified IP and port
 	if (bind(server_socket, (struct sockaddr *) &address, sizeof(address)) == -1)
 	{
 		perror("bind");
 		exit(-1);
 	}
+}
 
-	if (listen(server_socket, 3) == -1)
+int main(int argc, char *argv[])
+{
+	int		client_socket;
+	int		server_socket;
+	char	buffer[256];
+	char	*path;
+	
+	if (argc < 2)
+		return (error("Usage: ./server port", -1));
+
+	ft_memset(buffer, 0, sizeof(buffer));
+	
+	path = create_directory();
+	server_socket = create_socket();	
+	bind_socket(server_socket, ft_atoi(argv[1]));
+	listen(server_socket, 3);
+
+	printf("waiting for connection...\n");
+
+	struct sockaddr_in client_info;
+	socklen_t size = sizeof(client_info);
+	pid_t pid;
+
+	while ((client_socket = accept(server_socket, (struct sockaddr *) &client_info, &size)))
 	{
-		perror("listen");
-		exit(-1);
-	}
+		if (client_socket == -1)
+		{
+			perror("client socket");
+			exit(-1);
+		}
+	
+		printf("client connected: %s:%d\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port));
 
-	printf("Connected to %d\n", port);
+		if ((pid = fork()) == -1)
+			close(client_socket);
+		else if (pid == 0)
+		{
+			while (1)
+			{
+				recv(client_socket, &buffer, sizeof(buffer), 0);
+				printf("%s:%d: %s\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port), buffer);
+				if (ft_strequ(buffer, "quit"))
+				{
+					printf("DISCONNECTED\n");
+					char message[] = "Disconnected from server.";
+					send(client_socket, message, sizeof(message), 0);
+					break;
+				}
+				send(client_socket, buffer, sizeof(buffer), 0);
+				ft_memset(buffer, 0, sizeof(buffer));
+			}
+			close(client_socket);
+		}
+		else
+		{
+			close(client_socket);
+		}
+	}	
 
-	// accept() returns the client socket that we're going to write to
-	// need to pass a struct into accept() if you want to get information about the connected client
-	client_socket = accept(server_socket, NULL, NULL);
-
-	if (client_socket == -1)
-	{
-		perror("client socket");
-		exit(-1);
-	}
-
-	while (ft_strcmp(buffer, "quit") != 0)
-	{
-		recv(client_socket, &buffer, sizeof(buffer), 0);
-		printf("buffer: %s\n", buffer);
-		// do_op(buffer);
-		send(client_socket, buffer, sizeof(buffer), 0);
-		ft_bzero(buffer, sizeof(buffer));
-	}
-		
-	close(server_socket);
 }
