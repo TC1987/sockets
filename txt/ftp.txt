@@ -1,0 +1,21 @@
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    ftp.txt                                            :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: tcho <marvin@42.fr>                        +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2019/02/17 05:29:03 by tcho              #+#    #+#              #
+#    Updated: 2019/02/17 05:40:29 by tcho             ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
+
+File Transfer Protocol:
+Used for transfering files to/from another computer.
+
+For logging into an FTP server, would need the site URL (or IP address), login, password, and port on which the FTP server is running.
+
+FTP is used exclusively with TCP; there is no UDP component to FTP.
+
+Uses 2 different ports; a command port and a data port.
+

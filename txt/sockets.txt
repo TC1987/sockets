@@ -6,7 +6,7 @@
 #    By: tcho <marvin@42.fr>                        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2019/02/17 05:18:36 by tcho              #+#    #+#              #
-#    Updated: 2019/02/17 05:26:28 by tcho             ###   ########.fr        #
+#    Updated: 2019/02/17 05:35:53 by tcho             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,3 +17,7 @@ When the server receives a new connection, it does not create a new port to hand
 A socket connection is defined by the server's IP address, port number, client's IP, client's port number, and protocol. Because of a different port number that would be used, the client can connect to a server multiple times.
 
 On the client side, a random dedicated port is selected for the socket connection which means that you can only have ~65K concurrent connections at any given time.
+
+----------------- QUOTES ---------------------
+
+Each port number is dedicated to a corresponding application on the server, and the traffic intended for an application (such as an FTP server or web server) passes through the application’s dedicated door.
