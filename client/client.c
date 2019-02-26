@@ -38,95 +38,100 @@
 
 int error(char *message, int code)
 {
-	printf("%s\n", message);
-	return (code);
+    printf("%s\n", message);
+    return (code);
 }
 
 int validate_command(char *command)
 {
-	if (!ft_strncmp(command, "ls", 2) ||
-		!ft_strncmp(command, "cd", 2) ||
-		!ft_strncmp(command, "pwd", 3) ||	
-		!ft_strncmp(command, "get", 3) ||
-		!ft_strncmp(command, "put", 3) ||
-		!ft_strncmp(command, "quit", 4))
-		return (1);
-	return (0);
+    if (ft_strnequ(command, "ls", 2) ||
+            ft_strnequ(command, "cd", 2) ||
+            ft_strnequ(command, "pwd", 3) ||	
+            ft_strnequ(command, "get", 3) ||
+            ft_strnequ(command, "put", 3) ||
+            ft_strnequ(command, "quit", 4))
+        return (1);
+    return (0);
 }
 
 void display_menu(char *ip_address, int port)
 {
-	printf("*************************************\n");
-	printf("*                                   *\n");
-	printf("*   Connected to %s:%d   *\n", ip_address, port);
-	printf("*                                   *\n");
-	printf("*************************************\n");
+    printf("*************************************\n");
+    printf("*                                   *\n");
+    printf("*   Connected to %s:%d   *\n", ip_address, port);
+    printf("*                                   *\n");
+    printf("*************************************\n");
+}
+
+int create_socket(void)
+{
+    int server_socket;
+
+    if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+    {
+        perror("socket");
+        exit(-1);
+    }    
+    return (server_socket);
+}
+
+void connect_server(int connection_socket, char *ip_address, int port)
+{
+    struct sockaddr_in address;
+
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);
+    address.sin_addr.s_addr = inet_addr(ip_address);;
+    if (connect(connection_socket, (struct sockaddr *) &address, sizeof(address)) == -1)
+    {
+        printf("Could not connect to server.\n");
+        exit(-1);
+    }
 }
 
 int main(int argc, char *argv[])
 {
-	int network_socket;
-	char *ip_address;
-	int port;
-	struct sockaddr_in address;
-	char buffer[256];
+    int connection_socket;
+    char buffer[256];
 
-	ft_memset(buffer, 0, sizeof(buffer));
+    if (argc < 3)
+        return (error("Usage: ./client server port", -1));
 
-	if (argc < 3)
-		return (error("Usage: ./client server port", -1));
+    connection_socket = create_socket();
+    connect_server(connection_socket, argv[1], ft_atoi(argv[2]));
 
-	ip_address = argv[1];
-	port = ft_atoi(argv[2]);
-	
-	if ((network_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-	{
-		printf("Could not create socket.\n");
-		exit(-1);
-	}
+    ft_memset(buffer, 0, sizeof(buffer));
 
-	address.sin_family = AF_INET; // Same as the socket type.
-	address.sin_port = htons(port);
-	address.sin_addr.s_addr = inet_addr(ip_address);;
+    display_menu(argv[1], ft_atoi(argv[2]));
 
-	if (connect(network_socket, (struct sockaddr *) &address, sizeof(address)) == -1)
-	{
-		printf("Could not connect to server.\n");
-		exit(-1);
-	}
+    // Issue with this while loop because and recv, nothing stops the while loop from constantly going.
+    while (1)
+    {	
+        printf("> ");
+        fflush(stdout);
 
-	display_menu(ip_address, port);
+        char *command;
+        get_next_line(0, &command);
 
-	while (1)
-	{	
-		printf("> ");
-		fflush(stdout);
+        if (validate_command(command) == 0)
+        {
+            close(connection_socket);
+            return (error("Not a valid command.", -1));
+        }
+        
+        send(connection_socket, command, ft_strlen(command), 0);
+        
+        ft_memset(buffer, 0, sizeof(buffer));
+        
+        recv(connection_socket, &buffer, sizeof(buffer), 0);
+        
+        printf("The server sent: %s\n", buffer);
 
-		char *command;
-		get_next_line(0, &command);
+        if (ft_strequ(buffer, "Disconnected from server."))
+            break;
+    }
 
-		if (!validate_command(command))
-		{
-			close(network_socket);
-			return (error("Not a valid command.", -1));
-		}
-		if (ft_strequ(command, "quit"))
-		{
-			send(network_socket, command, ft_strlen(command), 0);
-			recv(network_socket, &buffer, sizeof(buffer), 0);
-			printf("%s\n", buffer);
-			break;
-		}
-		else
-		{
-			send(network_socket, command, ft_strlen(command), 0);
-			ft_memset(buffer, 0, sizeof(buffer));
-			recv(network_socket, &buffer, sizeof(buffer), 0);
-			printf("The server sent: %s\n", buffer);
-		}
-	}
-
-	close(network_socket);
+    close(connection_socket);
 }
 
 char *str = "hello world";
