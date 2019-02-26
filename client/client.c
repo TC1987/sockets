@@ -6,7 +6,7 @@
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/02/17 23:43:13 by tcho              #+#    #+#             */
-/*   Updated: 2019/02/25 11:23:56 by tcho             ###   ########.fr       */
+/*   Updated: 2019/02/25 11:30:44 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -128,3 +128,9 @@ int main(int argc, char *argv[])
 
 	close(network_socket);
 }
+
+char *str = "hello world";
+
+some_function(str, "star wars")
+
+str = "star wars";
