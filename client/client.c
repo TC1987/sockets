@@ -38,29 +38,29 @@
 
 int error(char *message, int code)
 {
-	printf("%s\n", message);
-	return (code);
+    printf("%s\n", message);
+    return (code);
 }
 
 int validate_command(char *command)
 {
-	if (!ft_strncmp(command, "ls", 2) ||
-		!ft_strncmp(command, "cd", 2) ||
-		!ft_strncmp(command, "pwd", 3) ||	
-		!ft_strncmp(command, "get", 3) ||
-		!ft_strncmp(command, "put", 3) ||
-		!ft_strncmp(command, "quit", 4))
-		return (1);
-	return (0);
+    if (ft_strnequ(command, "ls", 2) ||
+            ft_strnequ(command, "cd", 2) ||
+            ft_strnequ(command, "pwd", 3) ||	
+            ft_strnequ(command, "get", 3) ||
+            ft_strnequ(command, "put", 3) ||
+            ft_strnequ(command, "quit", 4))
+        return (1);
+    return (0);
 }
 
 void display_menu(char *ip_address, int port)
 {
-	printf("*************************************\n");
-	printf("*                                   *\n");
-	printf("*   Connected to %s:%d   *\n", ip_address, port);
-	printf("*                                   *\n");
-	printf("*************************************\n");
+    printf("*************************************\n");
+    printf("*                                   *\n");
+    printf("*   Connected to %s:%d   *\n", ip_address, port);
+    printf("*                                   *\n");
+    printf("*************************************\n");
 }
 
 int create_socket(void)
@@ -78,60 +78,58 @@ int create_socket(void)
 void connect_server(int connection_socket, char *ip_address, int port)
 {
     struct sockaddr_in address;
-    
+
     address.sin_family = AF_INET;
     address.sin_port = htons(port);
     address.sin_addr.s_addr = inet_addr(ip_address);;
     if (connect(connection_socket, (struct sockaddr *) &address, sizeof(address)) == -1)
     {
-            printf("Could not connect to server.\n");
-            exit(-1);
+        printf("Could not connect to server.\n");
+        exit(-1);
     }
 }
 
 int main(int argc, char *argv[])
 {
-	int connection_socket;
-	char buffer[256];
+    int connection_socket;
+    char buffer[256];
 
-	if (argc < 3)
-		return (error("Usage: ./client server port", -1));
+    if (argc < 3)
+        return (error("Usage: ./client server port", -1));
 
-        connection_socket = create_socket();
-        connect_server(connection_socket, argv[1], ft_atoi(argv[2]));
-	
-	ft_memset(buffer, 0, sizeof(buffer));
+    connection_socket = create_socket();
+    connect_server(connection_socket, argv[1], ft_atoi(argv[2]));
 
-	display_menu(argv[1], ft_atoi(argv[2]));
+    ft_memset(buffer, 0, sizeof(buffer));
 
-	while (1)
-	{	
-		printf("> ");
-		fflush(stdout);
+    display_menu(argv[1], ft_atoi(argv[2]));
 
-		char *command;
-		get_next_line(0, &command);
+    // Issue with this while loop because and recv, nothing stops the while loop from constantly going.
+    while (1)
+    {	
+        printf("> ");
+        fflush(stdout);
 
-		if (validate_command(command) == 0)
-		{
-			close(connection_socket);
-			return (error("Not a valid command.", -1));
-		}
-		if (ft_strequ(command, "quit"))
-		{
-			send(connection_socket, command, ft_strlen(command), 0);
-			recv(connection_socket, &buffer, sizeof(buffer), 0);
-			printf("%s\n", buffer);
-			break;
-		}
-		else
-		{
-			send(connection_socket, command, ft_strlen(command), 0);
-			ft_memset(buffer, 0, sizeof(buffer));
-			recv(connection_socket, &buffer, sizeof(buffer), 0);
-			printf("The server sent: %s\n", buffer);
-		}
-	}
+        char *command;
+        get_next_line(0, &command);
 
-	close(connection_socket);
+        if (validate_command(command) == 0)
+        {
+            close(connection_socket);
+            return (error("Not a valid command.", -1));
+        }
+        
+        send(connection_socket, command, ft_strlen(command), 0);
+        
+        ft_memset(buffer, 0, sizeof(buffer));
+        
+        recv(connection_socket, &buffer, sizeof(buffer), 0);
+        
+        printf("The server sent: %s\n", buffer);
+
+        if (ft_strequ(buffer, "Disconnected from server."))
+            break;
+    }
+
+    close(connection_socket);
 }
