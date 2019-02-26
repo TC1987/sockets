@@ -6,7 +6,7 @@
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/02/18 07:34:15 by tcho              #+#    #+#             */
-/*   Updated: 2019/02/25 11:17:07 by tcho             ###   ########.fr       */
+/*   Updated: 2019/02/26 07:57:18 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,11 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include "libft.h"
+
+#define EXIT 0
 
 int error(char *message, int code)
 {
@@ -43,16 +47,91 @@ int error(char *message, int code)
    }
    */
 
-void do_close(int client_socket)
+int do_close(int socket)
 {
     char message[] = "Disconnected from server.";
     
     printf("Client has disconnected.\n");
-    send(client_socket, message, sizeof(message), 0);
-    close(client_socket);
+    send(socket, message, sizeof(message), 0);
+    close(socket);
+	return (0);
 }
 
-int do_op(char *command, int socket)
+int ft_lstlen(char **list)
+{
+	int len;
+
+	if (!list || !(*list))
+		return (0);
+	len = 0;
+	while (*list)
+	{
+		len++;
+		list++;
+	}
+	return (len);
+}
+
+char *get_full_path(char *current_path, char *path_to_add)
+{
+	char *full_path;
+
+	if (path_to_add[0] == '/')
+		return (path_to_add);
+	full_path = ft_strnew(ft_strlen(current_path) + ft_strlen(path_to_add) + 2);
+	full_path = ft_strcat(full_path, current_path);
+	if (full_path[ft_strlen(current_path) - 1] != '/')
+		ft_strcat(full_path, "/");
+	ft_strcat(full_path, path_to_add);
+	return (full_path);
+}
+
+int do_get(int socket, char *command, char *path)
+{
+	char		**args;
+	int			len;
+	int			fd;
+	struct stat	file_info;	
+	char		*full_path;
+	char		buffer[256];
+	int			file_size;
+	int			bytes_read;
+
+	args = ft_strsplit(command, ' ');
+	len = ft_lstlen(args);
+	if (len != 2)
+		return (0);
+
+	full_path = get_full_path(path, args[1]);
+	printf("%s\n", full_path);
+
+	if ((fd = open(full_path, O_RDONLY)) == -1)
+	{
+		perror("open file");
+		return (0);
+	}
+
+	fstat(fd, &file_info);
+	file_size = file_info.st_size;
+	
+	// Send file_size to client.
+	
+	send(socket, &file_size, sizeof(file_size));
+
+	// Send file contents while read returns something greater than 0 and file_size is greater than 0.
+	// Make amount of bytes read (i.e 3rd argument in read) be dynamic.
+
+	while ((bytes_read = read(fd, buffer, 256) > 0) && (file_size > 0))
+	{
+		send(socket, &buffer, sizeof(buffer), 0);
+		file_size -= bytes_read;
+	}
+
+	close(fd);
+	return (0);
+}
+
+int do_op(int socket, char *command, char *path)
 {
     if (ft_strnequ(command, "ls", 2))
     {
@@ -66,14 +145,14 @@ int do_op(char *command, int socket)
     }
     if (ft_strnequ(command, "get", 3))
     {
-        // do_get(command);
+        return (do_get(socket, command, path));
     }
     if (ft_strnequ(command, "put", 3))
     {
     }
     if (ft_strnequ(command, "quit", 4))
     {
-        do_close(socket);
+        return (do_close(socket));
     }
     return (1);
 }
@@ -81,10 +160,11 @@ int do_op(char *command, int socket)
 char *create_directory(void)
 {
     char *path;
+	int path_size = 256;
 
-    if ((path = malloc(sizeof(char) * 256)) == NULL)
+    if ((path = malloc(sizeof(char) * path_size)) == NULL)
         return (NULL);
-    getcwd(path, sizeof(path));
+    getcwd(path, path_size);
     ft_strcat(path, "/root");
     mkdir(path, 0700);
     chdir(path);
@@ -156,15 +236,18 @@ int main(int argc, char *argv[])
             close(client_socket);
         else if (pid == 0)
         {
-            // close(server_socket);
-            while (1)
+            close(server_socket);
+
+			int alive = 1;
+            while (alive)
             {
                 recv(client_socket, &buffer, sizeof(buffer), 0);
                 printf("%s:%d: %s\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port), buffer);
-                do_op(buffer, client_socket);
+                alive = do_op(client_socket, buffer, path);
                 send(client_socket, buffer, sizeof(buffer), 0);
                 ft_memset(buffer, 0, sizeof(buffer));
             }
+			close(client_socket);
         }
         else
             close(client_socket);
