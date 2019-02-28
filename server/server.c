@@ -6,7 +6,7 @@
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/02/18 07:34:15 by tcho              #+#    #+#             */
-/*   Updated: 2019/02/26 07:57:18 by tcho             ###   ########.fr       */
+/*   Updated: 2019/02/27 06:31:44 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,21 +31,6 @@ int error(char *message, int code)
     printf("%s\n", message);
     return (code);
 }
-
-/*
-   int do_get(char *command)
-   {
-   char *file;
-   int fd;
-
-   file = ft_strchr(command, ' ');
-   file++;
-   if ((fd = open(file, O_RDONLY )))
-   {
-
-   }
-   }
-   */
 
 int do_close(int socket)
 {
@@ -93,7 +78,7 @@ int do_get(int socket, char *command, char *path)
 	int			fd;
 	struct stat	file_info;	
 	char		*full_path;
-	char		buffer[256];
+	char		buffer[4096];
 	int			file_size;
 	int			bytes_read;
 
@@ -102,8 +87,12 @@ int do_get(int socket, char *command, char *path)
 	if (len != 2)
 		return (0);
 
+	// Get full path of the file that's been requested.
+
 	full_path = get_full_path(path, args[1]);
 	printf("%s\n", full_path);
+
+	// Open the file. If error, the file doesn't exist.
 
 	if ((fd = open(full_path, O_RDONLY)) == -1)
 	{
@@ -111,19 +100,25 @@ int do_get(int socket, char *command, char *path)
 		return (0);
 	}
 
+	// Get file size information.
+
 	fstat(fd, &file_info);
 	file_size = file_info.st_size;
 	
 	// Send file_size to client.
 	
-	send(socket, &file_size, sizeof(file_size));
+	send(socket, &file_size, sizeof(file_size), 0);
+
+	/* --------------------------------------------------------- */
 
 	// Send file contents while read returns something greater than 0 and file_size is greater than 0.
 	// Make amount of bytes read (i.e 3rd argument in read) be dynamic.
+	
 
-	while ((bytes_read = read(fd, buffer, 256) > 0) && (file_size > 0))
+
+	while ((bytes_read = read(fd, buffer, 255) > 0) && (file_size > 0))
 	{
-		send(socket, &buffer, sizeof(buffer), 0);
+		send(socket, &buffer, sizeof(bytes_read), 0);
 		file_size -= bytes_read;
 	}
 
@@ -233,19 +228,35 @@ int main(int argc, char *argv[])
         printf("client connected: %s:%d\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port));
 
         if ((pid = fork()) == -1)
+		{
+			perror("fork");
             close(client_socket);
+		}
         else if (pid == 0)
         {
             close(server_socket);
+			
+			// Send path to client.
+
+			send(client_socket, path, 256, 0);
 
 			int alive = 1;
             while (alive)
-            {
-                recv(client_socket, &buffer, sizeof(buffer), 0);
+			{
+				// Get command from client.
+                
+				recv(client_socket, &buffer, sizeof(buffer), 0);
                 printf("%s:%d: %s\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port), buffer);
-                alive = do_op(client_socket, buffer, path);
+                
+				// Execute command.
+
+				alive = do_op(client_socket, buffer, path);
+
+				// WTF?
+				/*	
                 send(client_socket, buffer, sizeof(buffer), 0);
                 ft_memset(buffer, 0, sizeof(buffer));
+				*/
             }
 			close(client_socket);
         }
