@@ -11,8 +11,8 @@
 # **************************************************************************** #
 
 NAME = ftp
-CLIENT = client/client
-SERVER = server/server
+CLIENT = client/client2
+SERVER = server/server2
 CLIENT_SRC = $(addsuffix .c, $(CLIENT))
 SERVER_SRC = $(addsuffix .c, $(SERVER))
 CLIENT_EXE = c
