@@ -7,8 +7,6 @@
 #include <fcntl.h>
 #include "libft.h"
 
-#define RDSIZE 4096
-
 void get_file(int sd)
 {
     int fd;

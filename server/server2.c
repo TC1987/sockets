@@ -8,43 +8,81 @@
 #include <sys/mman.h>
 #include "libft.h"
 
-void send_file(int sd)
+int ft_lstlen(char **list)
+{
+	int i;
+
+	i = 0;
+	if (!list || !(*list))
+		return (0);
+	while (*list)
+	{
+		i++;
+		list++;
+	}
+	return (i);
+}
+
+char *get_full_path(char *current_path, char *path_to_add)
+{
+	char *full_path;
+
+	if (path_to_add[0] == '/')
+		return (path_to_add);
+	full_path = ft_strnew(ft_strlen(current_path) + ft_strlen(path_to_add) + 2);
+	full_path = ft_strcat(full_path, current_path);
+	if (full_path[ft_strlen(current_path) - 1] != '/')
+		ft_strcat(full_path, "/");
+	ft_strcat(full_path, path_to_add);
+	return (full_path);
+}
+
+int send_file(int sd, char *command, char *path)
 {
     int fd;
     struct stat fd_info;
     char *file_ptr;
     int file_size;
     int nbytes;
+	char **args;
+	char *full_path;
 
-    fd = open("test.txt", O_RDONLY);
+	args = ft_strsplit(command, ' ');
+	if (ft_lstlen(args) != 2)
+		return (0);
+
+	full_path = get_full_path(path, args[1]);
+	printf("full_path: %s\n", full_path);
+
+    fd = open(full_path, O_RDONLY);
     fstat(fd, &fd_info);
     file_size = fd_info.st_size;
 
     send(sd, &file_size, sizeof(file_size), 0);
-
     file_ptr = mmap(NULL, fd_info.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-
     while (file_size > 0 && ((nbytes = send(sd, file_ptr, fd_info.st_size, 0) > 0)))
     {
         file_ptr += nbytes;
         file_size -= nbytes;
     }
-
     munmap(file_ptr, fd_info.st_size);
     close(fd);
+	return (1);
 }
 
 char *create_directory(void)
 {
     char *path;
+	char *full_path;
 
     if ((path = malloc(sizeof(char) * 256)) == NULL)
         return (NULL);
-    getcwd(path, 256);
-    ft_strcat(path, "/root");
-    mkdir(path, 0777);
-    chdir(path);
-    return (path);
+    path = getcwd(NULL, 0);
+    full_path = ft_strjoin(path, "/root");
+    mkdir(full_path, 0777);
+    chdir(full_path);
+	free(path);
+    return (full_path);
 }
 
 char *do_pwd(void)
@@ -62,6 +100,32 @@ char *do_chdir(char *new_path, char *current_path)
 }
 */
 
+int do_op(int socket, char *command, char *path)
+{
+	if (ft_strnequ(command, "ls", 2))
+	{	
+		execl("/bin/ls", "ls");
+	}
+	else if (ft_strnequ(command, "cd", 2))
+	{
+	}
+	else if (ft_strnequ(command, "pwd", 3))
+	{
+	}
+	else if (ft_strnequ(command, "get", 3))
+	{
+		return (send_file(socket, command, path));
+	}
+	else if (ft_strnequ(command, "put", 3))
+	{
+	}
+	else if (ft_strnequ(command, "quit", 4))
+	{
+		return (0);
+	}
+	return (1);
+}
+
 int main(int argc, char *argv[])
 {
     if (argc != 2)
@@ -74,6 +138,9 @@ int main(int argc, char *argv[])
     int sd = socket(AF_INET, SOCK_STREAM, 0);
     socklen_t client_info_size;
     int client_socket;
+	char *path;
+	
+	path = create_directory();
 
     ft_memset(&address, 0, sizeof(address));
     address.sin_family = AF_INET;
@@ -99,11 +166,19 @@ int main(int argc, char *argv[])
         if (fork() == 0)
         {
             printf("Client %s:%d connected.\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port));
-            close(sd);
-            send_file(client_socket);
-            // get_file(client_socket);
-            close(client_socket);
-            break;
+			
+			int keep_alive = 1;
+			char command[256];
+
+			while (keep_alive)
+			{
+				close(sd);
+				recv(client_socket, &command, sizeof(command), 0); 
+				if ((keep_alive = do_op(client_socket, command, path)) == 0)
+					break;
+			}
+			close(client_socket);
+			break;
         }
         else
         {
