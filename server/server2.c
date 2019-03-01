@@ -164,13 +164,14 @@ int main(int argc, char *argv[])
 
         if (fork() == 0)
         {
-            printf("Client %s:%d connected.\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port));
 			int keep_alive = 1;
 			char command[256];
 
+            printf("Client %s:%d connected.\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port));
+			send(client_socket, path, ft_strlen(path), 0);
+
 			while (keep_alive)
 			{
-				// send(client_socket, path, ft_strlen(path), 0);
 				recv(client_socket, command, sizeof(command), 0);
 				keep_alive = do_op(client_socket, command, &path);
 				ft_memset(command, 0, sizeof(command));

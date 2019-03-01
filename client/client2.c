@@ -71,18 +71,57 @@ int get_pwd(int sd, char *command)
 	return (1);
 }
 
+char *expand(char *prefix, char *suffix)
+{
+	char *path;
+	char *head;
+	int path_length;
+	int i;
+
+	i = 0;
+	if (ft_strequ(suffix, "."))
+		path_length = ft_strlen(g_pwd);
+	else
+		path_length = ft_strlastindex(g_pwd, '/');
+	path = ft_strnew(ft_strlen(prefix) + 1 + path_length + 1 + ft_strlen(suffix) + 1);
+	head = path;
+	while (*prefix)
+		*path++ = *prefix++;
+	*path++ = ' ';
+	while (i < path_length)
+		*path++ = g_pwd[i++];
+	*path++ = '/';
+	while (*suffix)
+		*path++ = *suffix++;
+	*path = '\0';
+	return (head);
+}
+
 int do_cd(int sd, char *command)
 {
 	char **args;
+	char *expanded;
+	char *location;
 
 	args = ft_strsplit(command, ' ');
+	expanded = command;
 	if (ft_lstlen(args) != 2)
 		printf("Usage: cd path\n");
 	else
 	{
-		send(sd, command, ft_strlen(command), 0);
-		// get_pwd(sd, command);
+		if ((args[1][0] == '.') || ft_strnequ(args[1], "..", 2))
+		{
+			location = ft_strrchr(args[1], '.');
+			if (ft_strlen(location) == 1)
+				expanded = expand(args[0], location + 1);
+			else if (ft_strlen(location) >= 2)
+				expanded = expand(args[0], location + 2);
+		}
+		send(sd, expanded, ft_strlen(expanded), 0);
+		// get_pwd(sd, command); // Issue because get_pwd has send() and send_pwd on the server end just has send().
 	}
+	// free(args);
+	free(expanded);
 	return (1);
 }
 
@@ -143,12 +182,12 @@ int main(int argc, char *argv[])
 
 	int keep_alive = 1;
 	char *command;
-	// char path[256];
+	
+	recv(sd, g_pwd, sizeof(g_pwd), 0);
 
 	while (keep_alive)
 	{
 		/*
-		recv(sd, path, sizeof(path), 0);
 		printf("%s $ ", path);
 		fflush(stdout);
 		*/
@@ -161,6 +200,7 @@ int main(int argc, char *argv[])
 			return (error("Not a valid command", -1));
 		}
 		keep_alive = do_op(sd, command);
+		free(command);
 		// ft_memset(path, 0, sizeof(path));
 	}
     close(sd);
