@@ -86,11 +86,14 @@ int send_file(int sd, char *command)
 	file = ft_strrchr(command, ' ') + 1;
 	// Does this also return -1 if user doesn't have permissions to open the file?
     if ((fd = open(file, O_RDONLY)) == -1)
-	{
-		printf("File does not exist.\n");
-		return (1);
-	}
+		return (display("File does not exist.\n", 1));
     fstat(fd, &fd_info);
+	if (!S_ISREG(fd_info.st_mode))
+	{
+		file_size = -1;
+		send(sd, &file_size, sizeof(file_size), 0);
+		return (display("Not a file", 1));
+	}
     file_size = fd_info.st_size;
     send(sd, &file_size, sizeof(file_size), 0);
     file_ptr = mmap(NULL, fd_info.st_size, PROT_READ, MAP_PRIVATE, fd, 0);

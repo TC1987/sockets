@@ -93,6 +93,8 @@ int get_file(int sd, char *command)
 	else
 		file_name = ft_strrchr(command, ' ') + 1;
     recv(sd, &file_size, sizeof(file_size), 0);
+	if (file_size == -1)
+		return (display("File cannot be a directory.", 1));
     buffer = malloc(sizeof(char) * file_size);
 	remaining = file_size;
     fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0777);
