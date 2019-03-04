@@ -70,7 +70,7 @@ CFLAGS = -Wall -Wextra -Werror -c
 
 all: $(NAME)
 
-$(NAME):
+$(NAME): $(SRC)
 	@gcc $(CFLAGS) $(SRC) -I.
 	@ar rc $(NAME) $(OBJ)
 	@ranlib $(NAME)

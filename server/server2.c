@@ -83,49 +83,6 @@ void create_directory(void)
     chdir(g_path);
 }
 
-int send_pwd(int sd)
-{
-	send(sd, g_path, ft_strlen(g_path), 0);
-	return (1);
-}
-
-int change_dir(char *command)
-{
-	char *path;
-	char new_path[SIZE];
-
-	printf("%s\n", command);
-	path = ft_strrchr(command, ' ') + 1;
-	printf("%s\n", path);
-	if (path[0] == '/')
-	{
-		if (chdir(path) == -1)
-		{
-			perror("ls: ");
-			return (1);
-		}
-		// Verify permissions (i.e jail).
-		ft_memset(&g_path, 0, sizeof(g_path));
-		ft_strcpy(g_path, path);
-	}
-	else
-	{
-		ft_strcpy(new_path, g_path);
-		if (new_path[ft_strlen(new_path) - 1] != '/')
-			ft_strcat(new_path, "/");
-		ft_strcat(new_path, path);
-		if (chdir(new_path) == -1)
-		{
-			perror("cd: ");
-			return (1);
-		}
-		ft_memset(&g_path, 0, sizeof(g_path));
-		ft_strcpy(g_path, new_path);
-	}
-	printf("Directory has been changed to %s\n", g_path);
-	return (1);
-}
-
 int send_ls(int socket, char *command)
 {
 	int fd;
@@ -153,6 +110,56 @@ int send_ls(int socket, char *command)
     // Else the path doesn't start with a '/' so need to append new_path onto current_path.
     // Then chdir and return the new path to main.
 
+int change_dir(char *command)
+{
+	char *path;
+	// char new_path[SIZE];
+
+	printf("%s\n", command);
+
+	path = ft_strrchr(command, ' ') + 1;
+	printf("%s\n", path);
+
+	// Check
+
+	/*
+	if (path[0] == '/')
+	{
+		if (chdir(path) == -1)
+		{
+			perror("ls: ");
+			return (1);
+		}
+		// Verify permissions (i.e jail).
+		ft_memset(&g_path, 0, sizeof(g_path));
+		ft_strcpy(g_path, path);
+	}
+	else
+	{
+		ft_strcpy(new_path, g_path);
+		if (new_path[ft_strlen(new_path) - 1] != '/')
+			ft_strcat(new_path, "/");
+		ft_strcat(new_path, path);
+		if (chdir(new_path) == -1)
+		{
+			perror("cd: ");
+			return (1);
+		}
+		ft_memset(&g_path, 0, sizeof(g_path));
+		ft_strcpy(g_path, new_path);
+	}
+	*/
+
+	printf("Directory has been changed to %s\n", g_path);
+	return (1);
+}
+
+int send_pwd(int sd)
+{
+	send(sd, g_path, ft_strlen(g_path), 0);
+	return (1);
+}
+
 int do_op(int socket, char *command)
 {
 	if (ft_strnequ(command, "ls", 2))
@@ -166,7 +173,7 @@ int do_op(int socket, char *command)
 	else if (ft_strnequ(command, "put", 3))
 		return (upload_file(socket, command));
 	else if (ft_strnequ(command, "quit", 4))
-		return (display("User has disconnected.\n", 0));
+		return (display("User has disconnected.", 0));
 	return (0);
 }
 
@@ -191,9 +198,10 @@ int create_socket(char *port)
 void handle_client(int client, struct sockaddr_in client_info)
 {
 	char command[256];
-
+	
 	printf("Client %s:%d connected.\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port));
-
+	
+	ft_memset(command, 0, sizeof(command));
 	while (recv(client, command, sizeof(command), 0))
 	{
 		if (do_op(client, command) == 0)
@@ -216,7 +224,7 @@ void accept_client(int sd)
         if (fork() == 0)
         {
 			handle_client(client, client_info);
-			break;
+			return;
         }
         else
             close(client);

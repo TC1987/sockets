@@ -101,21 +101,6 @@ int put_file(int sd, char *command)
 	return (1);
 }
 
-int get_pwd(int sd, char *command)
-{
-	char buffer[SIZE];
-
-	if (count_spaces(command) != 0)
-		printf("pwd only takes 1 argument. You should know better.\n");
-	else
-	{
-		send(sd, command, ft_strlen(command), 0);
-		recv(sd, buffer, sizeof(buffer), 0);
-		printf("%s\n", buffer);
-	}
-	return (1);
-}
-
 char *expand(char *prefix, char *suffix)
 {
 	char *path;
@@ -137,38 +122,6 @@ char *expand(char *prefix, char *suffix)
 		*path++ = *suffix++;
 	*path = '\0';
 	return (head);
-}
-
-int do_cd(int sd, char *command)
-{
-	printf("%s\n", command);
-
-	char **args;
-	char *expanded;
-
-	args = ft_strsplit(command, ' ');
-	expanded = command;
-	if (ft_lstlen(args) != 2)
-		printf("Usage: cd path\n");
-	else
-	{
-		send(sd, command, ft_strlen(command), 0);
-		/*
-		if ((args[1][0] == '.') || ft_strnequ(args[1], "..", 2))
-		{
-			location = ft_strrchr(args[1], '.');
-			if (ft_strlen(location) == 1)
-				expanded = expand(args[0], location + 1);
-			else if (ft_strlen(location) >= 2)
-				expanded = expand(args[0], location + 2);
-		}
-		send(sd, expanded, ft_strlen(expanded), 0);
-		*/
-		// get_pwd(sd, command); // Issue because get_pwd has send() and send_pwd on the server end just has send().
-	}
-	// free(args);
-	// free(expanded);
-	return (1);
 }
 
 void read_file(char *file)
@@ -195,10 +148,50 @@ int do_ls(int sd, char *command)
 	return (1);
 }
 
+int do_cd(int sd, char *command)
+{
+	if (ft_word_count(command, ' ') != 2)
+		printf("Usage: cd path\n");
+	else
+	{
+		send(sd, command, ft_strlen(command), 0);
+		/*
+		if ((args[1][0] == '.') || ft_strnequ(args[1], "..", 2))
+		{
+			location = ft_strrchr(args[1], '.');
+			if (ft_strlen(location) == 1)
+				expanded = expand(args[0], location + 1);
+			else if (ft_strlen(location) >= 2)
+				expanded = expand(args[0], location + 2);
+		}
+		send(sd, expanded, ft_strlen(expanded), 0);
+		*/
+		// get_pwd(sd, command); // Issue because get_pwd has send() and send_pwd on the server end just has send().
+	}
+	// free(args);
+	// free(expanded);
+	return (1);
+}
+
 int do_quit(int sd, char *command)
 {
 	send(sd, command, ft_strlen(command), 0);
 	return (0);
+}
+
+int get_pwd(int sd, char *command)
+{
+	char buffer[SIZE];
+
+	if (count_spaces(command) != 0)
+		printf("pwd only takes 1 argument. You should know better.\n");
+	else
+	{
+		send(sd, command, ft_strlen(command), 0);
+		recv(sd, buffer, sizeof(buffer), 0);
+		printf("%s\n", buffer);
+	}
+	return (1);
 }
 
 int do_op(int socket, char *command)
@@ -218,29 +211,37 @@ int do_op(int socket, char *command)
 	return (0);
 }
 
-int create_socket(void)
+int create_and_connect(char *ip_address, char *port)
 {
-	int server_socket;
-
-	if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-	{
-		perror("socket");
-		exit(-1);
-	}
-	return (server_socket);
-}
-
-void connect_server(int connection_socket, char *ip_address, int port)
-{
+	int sd;
 	struct sockaddr_in address;
 
+	error_check((sd = socket(AF_INET, SOCK_STREAM, 0)), "create");
+	ft_memset(&address, 0, sizeof(address));
 	address.sin_family = AF_INET;
-	address.sin_port = htons(port);
 	address.sin_addr.s_addr = inet_addr(ip_address);;
-	if (connect(connection_socket, (struct sockaddr *) &address, sizeof(address)) == -1)
+	address.sin_port = htons(ft_atoi(port));
+	error_check(connect(sd, (struct sockaddr *) &address, sizeof(address)), "connect");
+	return (sd);
+}
+
+void handle_requests(int sd)
+{
+	int keep_alive;
+	char *command;
+
+	keep_alive = 1;
+	while (keep_alive)
 	{
-		printf("Could not connect to server.\n");
-		exit(-1);
+		ft_putstr(">> ");
+		get_next_line(0, &command);
+		if (ft_strequ(command, ""))
+			continue;
+		else if (check_command(command) == 0)
+			printf("Not a valid command\n");
+		else
+			keep_alive = do_op(sd, command);
+		free(command);
 	}
 }
 
@@ -252,46 +253,10 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    struct sockaddr_in address;
-    int sd = socket(AF_INET, SOCK_STREAM, 0);
+	int sd;
 
-    ft_memset(&address, 0, sizeof(address));
-    address.sin_addr.s_addr = inet_addr(argv[1]);
-    address.sin_port = htons(ft_atoi(argv[2]));
-    address.sin_family = AF_INET;
-
-    if (connect(sd, (struct sockaddr *) &address, sizeof(address)) == -1)
-    {
-        perror("connect");
-        exit(-1);
-    }
-
+	sd = create_and_connect(argv[1], argv[2]);
     printf("Connection to %s:%s successful.\n", argv[1], argv[2]);
-	printf("Available functions: get pwd quit\n");
-
-	int keep_alive = 1;
-	char *command;
-	
-    // ft_memset(g_pwd, 0, sizeof(g_pwd));
-	// recv(sd, g_pwd, sizeof(g_pwd), 0);
-
-	while (keep_alive)
-	{
-		/*
-		printf("%s $ ", path);
-		fflush(stdout);
-		*/
-		ft_putstr(">> ");
-		get_next_line(0, &command);
-		
-		if (ft_strequ(command, ""))
-			continue;
-		else if (check_command(command) == 0)
-			printf("Not a valid command\n");
-		else
-			keep_alive = do_op(sd, command);
-		free(command);
-		// ft_memset(path, 0, sizeof(path));
-	}
+	handle_requests(sd);
     close(sd);
 }

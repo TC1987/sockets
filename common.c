@@ -6,7 +6,7 @@
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/02/28 03:27:28 by tcho              #+#    #+#             */
-/*   Updated: 2019/03/04 09:09:37 by tcho             ###   ########.fr       */
+/*   Updated: 2019/03/04 10:12:30 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,16 +32,16 @@ int display(char *message, int code)
 	return (code);
 }
 
-int count_spaces(char *command)
+int count_spaces(char *str)
 {
 	int i;
 
 	i = 0;
-	while (*command)
+	while (*str)
 	{
-		if (*command == ' ')
+		if (*str == ' ')
 			i++;
-		command++;
+		str++;
 	}
 	return (i);
 }
