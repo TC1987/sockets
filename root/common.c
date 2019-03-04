@@ -6,45 +6,11 @@
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/02/28 03:27:28 by tcho              #+#    #+#             */
-/*   Updated: 2019/03/04 09:09:37 by tcho             ###   ########.fr       */
+/*   Updated: 2019/02/28 03:35:07 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <errno.h>
 #include "libft.h"
-#include "common.h"
-
-int error_check(int return_value, char *subject)
-{
-	if (return_value == -1)
-	{
-		perror(subject);
-		exit(EXIT_FAILURE);
-	}
-	return (return_value);
-}
-
-int display(char *message, int code)
-{
-	printf("%s\n", message);
-	return (code);
-}
-
-int count_spaces(char *command)
-{
-	int i;
-
-	i = 0;
-	while (*command)
-	{
-		if (*command == ' ')
-			i++;
-		command++;
-	}
-	return (i);
-}
 
 int ft_lstlen(char **list)
 {
