@@ -14,6 +14,7 @@
 #define SIZE 256
 
 char g_pwd[SIZE];
+char g_message[4096];
 
 int error(char *message, int code)
 {
@@ -30,37 +31,6 @@ int check_command(char *command)
 	return (0);
 }
 
-int get_file(int sd, char *command)
-{
-    int fd;
-    int file_size;
-    char *buffer;
-    int nbytes;
-	char *file_name;
-	char **args;
-	int remaining;
-
-	printf("%s\n", command);
-	send(sd, command, ft_strlen(command), 0);
-	args = ft_strsplit(command, ' ');
-	if ((file_name = ft_strrchr(command, '/')))
-		file_name++;
-	else
-		file_name = args[1];
-    recv(sd, &file_size, sizeof(file_size), 0);
-    buffer = malloc(sizeof(char) * file_size);
-	remaining = file_size;
-    fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0777);
-    while (remaining > 0 && (nbytes = recv(sd, buffer, file_size, 0)) > 0)
-    {
-        write(fd, buffer, nbytes);
-        remaining -= nbytes;
-    }
-    close(fd);
-	printf("%s has successfully downloaded.\n", file_name);
-	return (1);
-}
-
 int put_file(int sd, char *command)
 {
     int fd;
@@ -68,23 +38,15 @@ int put_file(int sd, char *command)
     char *file_ptr;
     int file_size;
     int nbytes;
-	char **args;
-	char *full_path;
+	char *file;
 
-	args = ft_strsplit(command, ' ');
-	if (ft_lstlen(args) != 2)
-	{
-		printf("Usage: put file_name\n");
-		return (1);
-	}
+	if (ft_word_count(command, ' ') != 2)
+		return (display("Usage: put file_name\n", 1));
 	send(sd, command, ft_strlen(command), 0);
-	full_path = get_full_path(g_pwd, args[1]);
+	file = ft_strrchr(command, ' ') + 1;
 	// Does this also return -1 if user doesn't have permissions to open the file?
-    if ((fd = open(args[1], O_RDONLY)) == -1)
-	{
-		printf("File does not exist.\n");
-		return (1);
-	}
+    if ((fd = open(file, O_RDONLY)) == -1)
+		return (display("File does not exist.\n", 1));
     fstat(fd, &fd_info);
     file_size = fd_info.st_size;
     send(sd, &file_size, sizeof(file_size), 0);
@@ -96,32 +58,8 @@ int put_file(int sd, char *command)
     }
     munmap(file_ptr, fd_info.st_size);
     close(fd);
-	printf("%s has been successfully sent.\n", args[1]);
-	// free(args);
+	printf("%s has been successfully sent.\n", file);
 	return (1);
-}
-
-char *expand(char *prefix, char *suffix)
-{
-	char *path;
-	char *head;
-	int path_length;
-	int i;
-
-	i = 0;
-	path_length = (ft_strequ(suffix, ".")) ? ft_strlen(g_pwd) : ft_strlastindex(g_pwd, '/');
-	path = ft_strnew(ft_strlen(prefix) + 1 + path_length + 1 + ft_strlen(suffix) + 1);
-	head = path;
-	while (*prefix)
-		*path++ = *prefix++;
-	*path++ = ' ';
-	while (i < path_length)
-		*path++ = g_pwd[i++];
-	*path++ = '/';
-	while (*suffix)
-		*path++ = *suffix++;
-	*path = '\0';
-	return (head);
 }
 
 void read_file(char *file)
@@ -136,6 +74,36 @@ void read_file(char *file)
 		buffer[bytes] = '\0';
 		printf("%s", buffer);
 	}
+}
+
+int get_file(int sd, char *command)
+{
+    int fd;
+    int file_size;
+    char *buffer;
+    int nbytes;
+	char *file_name;
+	int remaining;
+
+	if (ft_word_count(command, ' ') != 2)
+		return (display("Usage: get file", 1));
+	send(sd, command, ft_strlen(command), 0);
+	if ((file_name = ft_strrchr(command, '/')))
+		file_name++;
+	else
+		file_name = ft_strrchr(command, ' ') + 1;
+    recv(sd, &file_size, sizeof(file_size), 0);
+    buffer = malloc(sizeof(char) * file_size);
+	remaining = file_size;
+    fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0777);
+    while (remaining > 0 && (nbytes = recv(sd, buffer, file_size, 0)) > 0)
+    {
+        write(fd, buffer, nbytes);
+        remaining -= nbytes;
+    }
+    close(fd);
+	printf("%s has successfully downloaded.\n", file_name);
+	return (1);
 }
 
 int do_ls(int sd, char *command)
@@ -155,21 +123,9 @@ int do_cd(int sd, char *command)
 	else
 	{
 		send(sd, command, ft_strlen(command), 0);
-		/*
-		if ((args[1][0] == '.') || ft_strnequ(args[1], "..", 2))
-		{
-			location = ft_strrchr(args[1], '.');
-			if (ft_strlen(location) == 1)
-				expanded = expand(args[0], location + 1);
-			else if (ft_strlen(location) >= 2)
-				expanded = expand(args[0], location + 2);
-		}
-		send(sd, expanded, ft_strlen(expanded), 0);
-		*/
-		// get_pwd(sd, command); // Issue because get_pwd has send() and send_pwd on the server end just has send().
+		recv(sd, g_message, sizeof(g_message), 0);
+		printf("%s\n", g_message);
 	}
-	// free(args);
-	// free(expanded);
 	return (1);
 }
 

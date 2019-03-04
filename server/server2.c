@@ -12,43 +12,10 @@
 #define SIZE 256
 
 char g_path[SIZE];
-
+char g_jail[SIZE];
+char g_message[4096];
 
 // Doing error checking on client side.
-
-
-int send_file(int sd, char *command)
-{
-    int fd;
-    struct stat fd_info;
-    char *file_ptr;
-    int file_size;
-    int nbytes;
-	char **args;
-
-	args = ft_strsplit(command, ' ');
-	if (ft_lstlen(args) != 2)
-		return (1);
-	// Does this also return -1 if user doesn't have permissions to open the file?
-    if ((fd = open(args[1], O_RDONLY)) == -1)
-	{
-		printf("File does not exist.\n");
-		return (1);
-	}
-    fstat(fd, &fd_info);
-    file_size = fd_info.st_size;
-    send(sd, &file_size, sizeof(file_size), 0);
-    file_ptr = mmap(NULL, fd_info.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    while (file_size > 0 && ((nbytes = send(sd, file_ptr, fd_info.st_size, 0)) != -1))
-    {
-        file_ptr += nbytes;
-        file_size -= nbytes;
-    }
-    munmap(file_ptr, fd_info.st_size);
-    close(fd);
-	printf("%s has been successfully sent.\n", args[1]);
-	return (1);
-}
 
 int upload_file(int sd, char *command)
 {
@@ -81,6 +48,7 @@ void create_directory(void)
     ft_strcat(g_path, "/root");
     mkdir(g_path, 0777);
     chdir(g_path);
+	ft_memcpy(g_jail, g_path, sizeof(g_path));
 }
 
 int send_ls(int socket, char *command)
@@ -104,53 +72,62 @@ int send_ls(int socket, char *command)
 	return (1);
 }
 
+int send_file(int sd, char *command)
+{
+    int fd;
+    struct stat fd_info;
+    char *file_ptr;
+    int file_size;
+    int nbytes;
+	char *file;
 
-// If the path starts with a '/', then current_path can be disregarded since new_path must be an absolute path.
-        // Need to verify that the absolute path is within the client's bounds.
-    // Else the path doesn't start with a '/' so need to append new_path onto current_path.
-    // Then chdir and return the new path to main.
+	if (ft_word_count(command, ' ') != 2)
+		return (1);
+	file = ft_strrchr(command, ' ') + 1;
+	// Does this also return -1 if user doesn't have permissions to open the file?
+    if ((fd = open(file, O_RDONLY)) == -1)
+	{
+		printf("File does not exist.\n");
+		return (1);
+	}
+    fstat(fd, &fd_info);
+    file_size = fd_info.st_size;
+    send(sd, &file_size, sizeof(file_size), 0);
+    file_ptr = mmap(NULL, fd_info.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    while (file_size > 0 && ((nbytes = send(sd, file_ptr, fd_info.st_size, 0)) != -1))
+    {
+        file_ptr += nbytes;
+        file_size -= nbytes;
+    }
+    munmap(file_ptr, fd_info.st_size);
+    close(fd);
+	printf("%s has been successfully sent.\n", file);
+	return (1);
+}
 
-int change_dir(char *command)
+int change_dir(int sd, char *command)
 {
 	char *path;
-	// char new_path[SIZE];
-
-	printf("%s\n", command);
 
 	path = ft_strrchr(command, ' ') + 1;
-	printf("%s\n", path);
-
-	// Check
-
-	/*
-	if (path[0] == '/')
+	if (*path == '/')
 	{
-		if (chdir(path) == -1)
-		{
-			perror("ls: ");
-			return (1);
-		}
-		// Verify permissions (i.e jail).
-		ft_memset(&g_path, 0, sizeof(g_path));
-		ft_strcpy(g_path, path);
+		if (!ft_strnequ(g_jail, path, sizeof(g_jail)))
+			ft_strcpy(g_message, "Do not have permission.");
 	}
+	else if (ft_strnequ(path, "..", 2))
+	{
+		
+	}
+	if (chdir(path) == -1)
+		ft_strcpy(g_message, "Path does not exist.");
 	else
 	{
-		ft_strcpy(new_path, g_path);
-		if (new_path[ft_strlen(new_path) - 1] != '/')
-			ft_strcat(new_path, "/");
-		ft_strcat(new_path, path);
-		if (chdir(new_path) == -1)
-		{
-			perror("cd: ");
-			return (1);
-		}
-		ft_memset(&g_path, 0, sizeof(g_path));
-		ft_strcpy(g_path, new_path);
+		getcwd(g_path, sizeof(g_path));
+		printf("Directory has been changed to %s\n", g_path);
+		ft_strcpy(g_message, g_path);
 	}
-	*/
-
-	printf("Directory has been changed to %s\n", g_path);
+	send(sd, g_message, sizeof(g_message), 0);
 	return (1);
 }
 
@@ -160,18 +137,18 @@ int send_pwd(int sd)
 	return (1);
 }
 
-int do_op(int socket, char *command)
+int do_op(int sd, char *command)
 {
 	if (ft_strnequ(command, "ls", 2))
-		return (send_ls(socket, command));
+		return (send_ls(sd, command));
 	else if (ft_strnequ(command, "cd", 2))
-		return (change_dir(command));
+		return (change_dir(sd, command));
 	else if (ft_strnequ(command, "pwd", 3))
-		return (send_pwd(socket));
+		return (send_pwd(sd));
 	else if (ft_strnequ(command, "get", 3))
-		return (send_file(socket, command));
+		return (send_file(sd, command));
 	else if (ft_strnequ(command, "put", 3))
-		return (upload_file(socket, command));
+		return (upload_file(sd, command));
 	else if (ft_strnequ(command, "quit", 4))
 		return (display("User has disconnected.", 0));
 	return (0);
