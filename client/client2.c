@@ -155,7 +155,7 @@ int get_pwd(int sd, char *command)
 {
 	char buffer[SIZE];
 
-	if (count_spaces(command) != 0)
+	if (ft_word_count(command, ' ') != 1)
 		printf("pwd only takes 1 argument. You should know better.\n");
 	else
 	{

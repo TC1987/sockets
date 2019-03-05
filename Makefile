@@ -6,15 +6,14 @@
 #    By: tcho <marvin@42.fr>                        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2019/02/17 23:47:20 by tcho              #+#    #+#              #
-#    Updated: 2019/03/01 04:14:09 by tcho             ###   ########.fr        #
+#    Updated: 2019/03/04 22:38:23 by tcho             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME = ftp
 CLIENT = client/client2
 SERVER = server/server2
-COMMON = common \
-		 ft_strlastindex
+COMMON = common
 CLIENT_SRC = $(addsuffix .c, $(CLIENT))
 SERVER_SRC = $(addsuffix .c, $(SERVER))
 COMMON_SRC = $(addsuffix .c, $(COMMON))
