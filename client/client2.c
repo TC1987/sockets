@@ -30,7 +30,7 @@ int check_command(char *command)
 	return (0);
 }
 
-void send_file(int sd, int fd) 
+int send_file(int sd, int fd) 
 {
     int file_size;
     int nbytes;
@@ -38,6 +38,12 @@ void send_file(int sd, int fd)
 	struct stat fd_info;
 
     fstat(fd, &fd_info);
+	if (!S_ISREG(fd_info.st_mode))
+	{
+		file_size = -1;
+		send(sd, &file_size, sizeof(file_size), 0);
+		return (display("Not a regular file.", 1));
+	}
     file_size = fd_info.st_size;
     send(sd, &file_size, sizeof(file_size), 0);
     file_ptr = mmap(NULL, fd_info.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
@@ -48,6 +54,7 @@ void send_file(int sd, int fd)
     }
     munmap(file_ptr, fd_info.st_size);
     close(fd);
+	return (1);
 }
 
 int put_file(int sd, char *command)
@@ -108,7 +115,7 @@ int get_file(int sd, char *command)
 	send(sd, command, ft_strlen(command), 0);
     recv(sd, &file_size, sizeof(file_size), 0);
 	if (file_size == -1)
-		return (display("File cannot be a directory.", 1));
+		return (display("Must be a regular file.", 1));
 	file_name = ft_strrchr(command, '/') ? ft_strrchr(command, '/') + 1 : ft_strrchr(command, ' ') + 1;
 	write_file(sd, file_size, file_name);
 	printf("%s has successfully downloaded.\n", file_name);

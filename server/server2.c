@@ -15,17 +15,17 @@ char g_path[SIZE];
 char g_jail[SIZE];
 char g_message[4096];
 
-// Doing error checking on client side.
-
-int upload_file(int sd, char *command)
+int get_file(int sd, char *command)
 {
     int fd;
     int file_size;
-    char *buffer;
     int nbytes;
+    char *buffer;
 	char *file_name;
 
     recv(sd, &file_size, sizeof(file_size), 0);
+	if (file_size == -1)
+		return (display("Must be a regular file.", 1));
     buffer = malloc(sizeof(char) * file_size);
 	file_name = ft_strrchr(command, '/') ? ft_strrchr(command, '/') + 1 : ft_strrchr(command, ' ') + 1;	
     error_check((fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0777)), "open");
@@ -85,12 +85,13 @@ int send_file(int sd, char *command)
 	file = ft_strrchr(command, ' ') + 1;
     if ((fd = open(file, O_RDONLY)) == -1)
 		return (display("File does not exist or you do not have permissions.", 1));
+	// Everything below minus the check for a file is the same as send_file on the client side.
     fstat(fd, &fd_info);
 	if (!S_ISREG(fd_info.st_mode))
 	{
 		file_size = -1;
 		send(sd, &file_size, sizeof(file_size), 0);
-		return (display("Not a file", 1));
+		return (display("Not a regular file", 1));
 	}
     file_size = fd_info.st_size;
     send(sd, &file_size, sizeof(file_size), 0);
@@ -102,7 +103,7 @@ int send_file(int sd, char *command)
     }
     munmap(file_ptr, fd_info.st_size);
     close(fd);
-	printf("%s has been successfully sent.\n", file);
+	printf("%s has been successfully sent.\n", ft_strrchr(file, '/') ? ft_strrchr(file, '/') + 1 : file);
 	return (1);
 }
 
@@ -145,7 +146,7 @@ int do_op(int sd, char *command)
 	else if (ft_strnequ(command, "get", 3))
 		return (send_file(sd, command));
 	else if (ft_strnequ(command, "put", 3))
-		return (upload_file(sd, command));
+		return (get_file(sd, command));
 	else if (ft_strnequ(command, "quit", 4))
 		return (display("User has disconnected.", 0));
 	return (0);
