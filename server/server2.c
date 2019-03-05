@@ -48,15 +48,15 @@ void create_directory(void)
 	ft_memcpy(g_jail, g_path, sizeof(g_path));
 }
 
-int send_ls(int socket, char *command)
+int send_ls(int sd, char *command)
 {
 	int fd;
 	pid_t pid;
 	char **args;
 
-	error_check((fd = open("ls", O_RDWR | O_CREAT, 0666)), "open");
-	args = ft_strsplit(command, ' ');
-	pid = fork();
+	error_check((fd = open(".ls", O_RDWR | O_TRUNC | O_CREAT, 0666)), "open");
+	args = ft_strsplit(command, ' '); // Need to free.
+	error_check((pid = fork()), "fork");
 	if (pid == 0)
 	{
 		dup2(fd, 1);
@@ -65,8 +65,8 @@ int send_ls(int socket, char *command)
 	else
 	{
 		wait4(pid, NULL, 0, NULL);
-		send(socket, NULL, 0, 0);
-		close(fd);
+		send_file_contents(sd, fd);
+		unlink(".ls");
 	}
 	return (1);
 }
@@ -74,10 +74,6 @@ int send_ls(int socket, char *command)
 int send_file(int sd, char *command)
 {
     int fd;
-    struct stat fd_info;
-    char *file_ptr;
-    int file_size;
-    int nbytes;
 	char *file;
 
 	if (ft_word_count(command, ' ') != 2)
@@ -85,24 +81,7 @@ int send_file(int sd, char *command)
 	file = ft_strrchr(command, ' ') + 1;
     if ((fd = open(file, O_RDONLY)) == -1)
 		return (display("File does not exist or you do not have permissions.", 1));
-	// Everything below minus the check for a file is the same as send_file on the client side.
-    fstat(fd, &fd_info);
-	if (!S_ISREG(fd_info.st_mode))
-	{
-		file_size = -1;
-		send(sd, &file_size, sizeof(file_size), 0);
-		return (display("Not a regular file", 1));
-	}
-    file_size = fd_info.st_size;
-    send(sd, &file_size, sizeof(file_size), 0);
-    file_ptr = mmap(NULL, fd_info.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    while (file_size > 0 && ((nbytes = send(sd, file_ptr, fd_info.st_size, 0)) != -1))
-    {
-        file_ptr += nbytes;
-        file_size -= nbytes;
-    }
-    munmap(file_ptr, fd_info.st_size);
-    close(fd);
+	send_file_contents(sd, fd);
 	printf("%s has been successfully sent.\n", ft_strrchr(file, '/') ? ft_strrchr(file, '/') + 1 : file);
 	return (1);
 }

@@ -30,33 +30,6 @@ int check_command(char *command)
 	return (0);
 }
 
-int send_file(int sd, int fd) 
-{
-    int file_size;
-    int nbytes;
-    char *file_ptr;
-	struct stat fd_info;
-
-    fstat(fd, &fd_info);
-	if (!S_ISREG(fd_info.st_mode))
-	{
-		file_size = -1;
-		send(sd, &file_size, sizeof(file_size), 0);
-		return (display("Not a regular file.", 1));
-	}
-    file_size = fd_info.st_size;
-    send(sd, &file_size, sizeof(file_size), 0);
-    file_ptr = mmap(NULL, fd_info.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    while (file_size > 0 && ((nbytes = send(sd, file_ptr, fd_info.st_size, 0)) != -1))
-    {
-        file_ptr += nbytes;
-        file_size -= nbytes;
-    }
-    munmap(file_ptr, fd_info.st_size);
-    close(fd);
-	return (1);
-}
-
 int put_file(int sd, char *command)
 {
     int fd;
@@ -68,7 +41,7 @@ int put_file(int sd, char *command)
     if ((fd = open(file, O_RDONLY)) == -1)
 		return (display("File does not exist or you do not have permissions.", 1));
 	send(sd, command, ft_strlen(command), 0);
-	send_file(sd, fd);
+	send_file_contents(sd, fd);
 	printf("%s has been successfully sent.\n", file);
 	return (1);
 }
@@ -85,8 +58,10 @@ void read_file(char *file)
 		buffer[bytes] = '\0';
 		printf("%s", buffer);
 	}
+	close(fd);
 }
 
+// Change to write_file_contents.
 void write_file(int sd, int file_size, char *file_name)
 {
     int fd;
@@ -105,19 +80,27 @@ void write_file(int sd, int file_size, char *file_name)
     close(fd);
 }
 
+// Change to write_file.
+int get_file_contents(int sd, char *file_name)
+{
+	int file_size;
+
+    recv(sd, &file_size, sizeof(file_size), 0);
+	if (file_size == -1)
+		return (display("Must be a regular file.", 1));
+	write_file(sd, file_size, file_name);
+	return (1);
+}
+
 int get_file(int sd, char *command)
 {
-    int file_size;
 	char *file_name;
 
 	if (ft_word_count(command, ' ') != 2)
 		return (display("Usage: get file", 1));
 	send(sd, command, ft_strlen(command), 0);
-    recv(sd, &file_size, sizeof(file_size), 0);
-	if (file_size == -1)
-		return (display("Must be a regular file.", 1));
 	file_name = ft_strrchr(command, '/') ? ft_strrchr(command, '/') + 1 : ft_strrchr(command, ' ') + 1;
-	write_file(sd, file_size, file_name);
+	get_file_contents(sd, file_name);
 	printf("%s has successfully downloaded.\n", file_name);
 	return (1);
 }
@@ -125,10 +108,9 @@ int get_file(int sd, char *command)
 int do_ls(int sd, char *command)
 {
 	send(sd, command, ft_strlen(command), 0);
-	recv(sd, NULL, 0, 0);
-	get_file(sd, "get ls");
-	read_file("ls");
-	unlink("ls");
+	get_file_contents(sd, ".ls");
+	read_file(".ls");
+	unlink(".ls");
 	return (1);
 }
 

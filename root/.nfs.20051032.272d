@@ -1,7 +1,7 @@
-ls
-mon.c
+common.c
 ft_strlastindex.c
-ls
+str_capitalizer.c
 test.txt
 test1
+test2
 upload.txt
