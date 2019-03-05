@@ -109,33 +109,20 @@ int send_file(int sd, char *command)
 int change_dir(int sd, char *command)
 {
 	char *path;
-	char *current_path;
 
 	path = ft_strrchr(command, ' ') + 1;
-	if (*path == '/')
-	{
-		if (!ft_strnequ(g_jail, path, sizeof(g_jail)))
-			ft_strcpy(g_message, "Do not have permission.");
-	}
-	if (ft_strnequ(path, "..", 2))
-	{
-		if (chdir(path) == -1)
-			ft_strcpy(g_message, "Path does not exist.");
-		current_path = ft_strdup(g_path);
-		if (!ft_strnequ(g_jail, getcwd(g_path, sizeof(g_path)), sizeof(g_jail)))
-			ft_strcpy(g_message, "Do not have permission.");
-		ft_strcpy(g_path, current_path);
-		free(current_path);
-		send(sd, g_message, sizeof(g_message), 0);
-		return (1);
-	}
 	if (chdir(path) == -1)
-		ft_strcpy(g_message, "Path does not exist.");
+		ft_strcpy(g_message, "You do not have permissions to this directory or it does not exist.");
 	else
 	{
-		getcwd(g_path, sizeof(g_path));
-		printf("Directory has been changed to %s\n", g_path);
-		ft_strcpy(g_message, g_path);
+		if (!ft_strnequ(g_jail, getcwd(g_path, sizeof(g_path)), ft_strlen(g_jail)))
+		{
+			ft_strcpy(g_path, g_jail);
+			chdir(g_path);
+			ft_strcpy(g_message, "You do not have permissions to access this directory.");
+		}
+		else
+			ft_strcpy(g_message, g_path);
 	}
 	send(sd, g_message, sizeof(g_message), 0);
 	return (1);
