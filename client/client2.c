@@ -13,7 +13,6 @@
 
 #define SIZE 256
 
-char g_pwd[SIZE];
 char g_message[4096];
 
 int error(char *message, int code)
@@ -31,22 +30,13 @@ int check_command(char *command)
 	return (0);
 }
 
-int put_file(int sd, char *command)
+void send_file(int sd, int fd) 
 {
-    int fd;
-    struct stat fd_info;
-    char *file_ptr;
     int file_size;
     int nbytes;
-	char *file;
+    char *file_ptr;
+	struct stat fd_info;
 
-	if (ft_word_count(command, ' ') != 2)
-		return (display("Usage: put file_name\n", 1));
-	send(sd, command, ft_strlen(command), 0);
-	file = ft_strrchr(command, ' ') + 1;
-	// Does this also return -1 if user doesn't have permissions to open the file?
-    if ((fd = open(file, O_RDONLY)) == -1)
-		return (display("File does not exist.\n", 1));
     fstat(fd, &fd_info);
     file_size = fd_info.st_size;
     send(sd, &file_size, sizeof(file_size), 0);
@@ -58,6 +48,20 @@ int put_file(int sd, char *command)
     }
     munmap(file_ptr, fd_info.st_size);
     close(fd);
+}
+
+int put_file(int sd, char *command)
+{
+    int fd;
+	char *file;
+
+	if (ft_word_count(command, ' ') != 2)
+		return (display("Usage: put file_name", 1));
+	file = ft_strrchr(command, ' ') + 1;
+    if ((fd = open(file, O_RDONLY)) == -1)
+		return (display("File does not exist or you do not have permissions.", 1));
+	send(sd, command, ft_strlen(command), 0);
+	send_file(sd, fd);
 	printf("%s has been successfully sent.\n", file);
 	return (1);
 }
@@ -76,34 +80,37 @@ void read_file(char *file)
 	}
 }
 
-int get_file(int sd, char *command)
+void write_file(int sd, int file_size, char *file_name)
 {
     int fd;
-    int file_size;
-    char *buffer;
     int nbytes;
-	char *file_name;
 	int remaining;
+    char *buffer;
 
-	if (ft_word_count(command, ' ') != 2)
-		return (display("Usage: get file", 1));
-	send(sd, command, ft_strlen(command), 0);
-	if ((file_name = ft_strrchr(command, '/')))
-		file_name++;
-	else
-		file_name = ft_strrchr(command, ' ') + 1;
-    recv(sd, &file_size, sizeof(file_size), 0);
-	if (file_size == -1)
-		return (display("File cannot be a directory.", 1));
     buffer = malloc(sizeof(char) * file_size);
 	remaining = file_size;
-    fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0777);
+    error_check((fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0777)), "open");
     while (remaining > 0 && (nbytes = recv(sd, buffer, file_size, 0)) > 0)
     {
         write(fd, buffer, nbytes);
         remaining -= nbytes;
     }
     close(fd);
+}
+
+int get_file(int sd, char *command)
+{
+    int file_size;
+	char *file_name;
+
+	if (ft_word_count(command, ' ') != 2)
+		return (display("Usage: get file", 1));
+	send(sd, command, ft_strlen(command), 0);
+    recv(sd, &file_size, sizeof(file_size), 0);
+	if (file_size == -1)
+		return (display("File cannot be a directory.", 1));
+	file_name = ft_strrchr(command, '/') ? ft_strrchr(command, '/') + 1 : ft_strrchr(command, ' ') + 1;
+	write_file(sd, file_size, file_name);
 	printf("%s has successfully downloaded.\n", file_name);
 	return (1);
 }

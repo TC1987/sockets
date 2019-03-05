@@ -24,14 +24,11 @@ int upload_file(int sd, char *command)
     char *buffer;
     int nbytes;
 	char *file_name;
-	
-	if ((file_name = ft_strrchr(command, '/')))
-		file_name++;
-	else
-		file_name = ft_strrchr(command, ' ') + 1;;
+
     recv(sd, &file_size, sizeof(file_size), 0);
     buffer = malloc(sizeof(char) * file_size);
-    fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0777);
+	file_name = ft_strrchr(command, '/') ? ft_strrchr(command, '/') + 1 : ft_strrchr(command, ' ') + 1;	
+    error_check((fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0777)), "open");
     while (file_size > 0 && (nbytes = recv(sd, buffer, 12, 0)) > 0)
     {
         write(fd, buffer, nbytes);
@@ -54,18 +51,20 @@ void create_directory(void)
 int send_ls(int socket, char *command)
 {
 	int fd;
+	pid_t pid;
 	char **args;
 
-	fd = open("ls", O_RDWR | O_CREAT, 0666); // Error Check
+	error_check((fd = open("ls", O_RDWR | O_CREAT, 0666)), "open");
 	args = ft_strsplit(command, ' ');
-	if (fork() == 0)
+	pid = fork();
+	if (pid == 0)
 	{
 		dup2(fd, 1);
 		execv("/bin/ls", args);
 	}
 	else
 	{
-		wait(NULL); // Change to wait4
+		wait4(pid, NULL, 0, NULL);
 		send(socket, NULL, 0, 0);
 		close(fd);
 	}
@@ -84,9 +83,8 @@ int send_file(int sd, char *command)
 	if (ft_word_count(command, ' ') != 2)
 		return (1);
 	file = ft_strrchr(command, ' ') + 1;
-	// Does this also return -1 if user doesn't have permissions to open the file?
     if ((fd = open(file, O_RDONLY)) == -1)
-		return (display("File does not exist.\n", 1));
+		return (display("File does not exist or you do not have permissions.", 1));
     fstat(fd, &fd_info);
 	if (!S_ISREG(fd_info.st_mode))
 	{
@@ -111,6 +109,7 @@ int send_file(int sd, char *command)
 int change_dir(int sd, char *command)
 {
 	char *path;
+	char *current_path;
 
 	path = ft_strrchr(command, ' ') + 1;
 	if (*path == '/')
@@ -118,9 +117,17 @@ int change_dir(int sd, char *command)
 		if (!ft_strnequ(g_jail, path, sizeof(g_jail)))
 			ft_strcpy(g_message, "Do not have permission.");
 	}
-	else if (ft_strnequ(path, "..", 2))
+	if (ft_strnequ(path, "..", 2))
 	{
-		
+		if (chdir(path) == -1)
+			ft_strcpy(g_message, "Path does not exist.");
+		current_path = ft_strdup(g_path);
+		if (!ft_strnequ(g_jail, getcwd(g_path, sizeof(g_path)), sizeof(g_jail)))
+			ft_strcpy(g_message, "Do not have permission.");
+		ft_strcpy(g_path, current_path);
+		free(current_path);
+		send(sd, g_message, sizeof(g_message), 0);
+		return (1);
 	}
 	if (chdir(path) == -1)
 		ft_strcpy(g_message, "Path does not exist.");
@@ -191,7 +198,7 @@ void handle_client(int client, struct sockaddr_in client_info)
 	close(client);
 }
 
-void accept_client(int sd)
+void serve_clients(int sd)
 {
 	int client;
 	socklen_t size;
@@ -223,5 +230,5 @@ int main(int argc, char *argv[])
 
 	create_directory();
 	sd = create_socket(argv[1]); 
-	accept_client(sd);
+	serve_clients(sd);
 }
