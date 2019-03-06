@@ -144,7 +144,7 @@ int do_op(int sd, char *command)
 	else if (ft_strnequ(command, "put", 3))
 		return (get_file(sd, command));
 	else if (ft_strnequ(command, "quit", 4))
-		return (display("User has disconnected.", 0));
+		return (display("user has disconnected.", 0));
 	return (0);
 }
 
@@ -170,7 +170,7 @@ void handle_client(int client, struct sockaddr_in client_info)
 {
 	char command[256];
 	
-	printf("Client %s:%d connected.\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port));
+	printf("client %s:%d connected.\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port));
 	
 	ft_memset(command, 0, sizeof(command));
 	while (recv(client, command, sizeof(command), 0))
@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
 {
     if (argc != 2)
     {
-        printf("Usage: ./s port\n");
+        printf("usage: ./s [port]\n");
         exit(-1);
     }
 
