@@ -1,268 +1,202 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   server.c                                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2019/02/18 07:34:15 by tcho              #+#    #+#             */
-/*   Updated: 2019/02/27 06:31:44 by tcho             ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include "libft.h"
+#include "common.h"
 
-#define EXIT 0
+#define SIZE 256
 
-int error(char *message, int code)
+char g_path[SIZE];
+char g_jail[SIZE];
+char g_message[4096];
+
+int get_file(int sd, char *command)
 {
-    printf("%s\n", message);
-    return (code);
+    int fd;
+    int file_size;
+    int nbytes;
+    char *buffer;
+	char *file_name;
+
+    recv(sd, &file_size, sizeof(file_size), 0);
+	if (file_size == -1)
+		return (display("Must be a regular file.", 1));
+    buffer = malloc(sizeof(char) * file_size);
+	file_name = ft_strrchr(command, '/') ? ft_strrchr(command, '/') + 1 : ft_strrchr(command, ' ') + 1;	
+    error_check((fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0777)), "open");
+    while (file_size > 0 && (nbytes = recv(sd, buffer, 12, 0)) > 0)
+    {
+        write(fd, buffer, nbytes);
+        file_size -= nbytes;
+    }
+    close(fd);
+	printf("%s has successfully downloaded.\n", file_name);
+	return (1);
 }
 
-int do_close(int socket)
+void create_directory(void)
 {
-    char message[] = "Disconnected from server.";
-    
-    printf("Client has disconnected.\n");
-    send(socket, message, sizeof(message), 0);
-    close(socket);
+    getcwd(g_path, sizeof(g_path));
+    ft_strcat(g_path, "/root");
+    mkdir(g_path, 0777);
+    chdir(g_path);
+	ft_memcpy(g_jail, g_path, sizeof(g_path));
+}
+
+int send_ls(int sd, char *command)
+{
+	int fd;
+	pid_t pid;
+	char **args;
+
+	error_check((fd = open(".ls", O_RDWR | O_TRUNC | O_CREAT, 0666)), "open");
+	args = ft_strsplit(command, ' '); // Need to free.
+	error_check((pid = fork()), "fork");
+	if (pid == 0)
+	{
+		dup2(fd, 1);
+		dup2(fd, 2);
+		execv("/bin/ls", args);
+	}
+	else
+	{
+		wait4(pid, NULL, 0, NULL);
+		send_file_contents(sd, fd);
+		unlink(".ls");
+	}
+	return (1);
+}
+
+int send_file(int sd, char *command)
+{
+    int fd;
+	char *file;
+
+	if (ft_word_count(command, ' ') != 2)
+		return (1);
+	file = ft_strrchr(command, ' ') + 1;
+    if ((fd = open(file, O_RDONLY)) == -1)
+		return (display("File does not exist or you do not have permissions.", 1));
+	send_file_contents(sd, fd);
+	printf("%s has been successfully sent.\n", ft_strrchr(file, '/') ? ft_strrchr(file, '/') + 1 : file);
+	return (1);
+}
+
+int change_dir(int sd, char *command)
+{
+	char *path;
+
+	path = ft_strrchr(command, ' ') + 1;
+	if (chdir(path) == -1)
+		ft_strcpy(g_message, "You do not have permissions to this directory or it does not exist.");
+	else
+	{
+		if (!ft_strnequ(g_jail, getcwd(g_path, sizeof(g_path)), ft_strlen(g_jail)))
+		{
+			ft_strcpy(g_path, g_jail);
+			chdir(g_path);
+			ft_strcpy(g_message, "You do not have permissions to access this directory.");
+		}
+		else
+			ft_strcpy(g_message, g_path);
+	}
+	send(sd, g_message, sizeof(g_message), 0);
+	return (1);
+}
+
+int send_pwd(int sd)
+{
+	send(sd, g_path, ft_strlen(g_path), 0);
+	return (1);
+}
+
+int do_op(int sd, char *command)
+{
+	if (ft_strnequ(command, "ls", 2))
+		return (send_ls(sd, command));
+	else if (ft_strnequ(command, "cd", 2))
+		return (change_dir(sd, command));
+	else if (ft_strnequ(command, "pwd", 3))
+		return (send_pwd(sd));
+	else if (ft_strnequ(command, "get", 3))
+		return (send_file(sd, command));
+	else if (ft_strnequ(command, "put", 3))
+		return (get_file(sd, command));
+	else if (ft_strnequ(command, "quit", 4))
+		return (display("User has disconnected.", 0));
 	return (0);
 }
 
-int ft_lstlen(char **list)
+int create_socket(char *port)
 {
-	int len;
-
-	if (!list || !(*list))
-		return (0);
-	len = 0;
-	while (*list)
-	{
-		len++;
-		list++;
-	}
-	return (len);
-}
-
-char *get_full_path(char *current_path, char *path_to_add)
-{
-	char *full_path;
-
-	if (path_to_add[0] == '/')
-		return (path_to_add);
-	full_path = ft_strnew(ft_strlen(current_path) + ft_strlen(path_to_add) + 2);
-	full_path = ft_strcat(full_path, current_path);
-	if (full_path[ft_strlen(current_path) - 1] != '/')
-		ft_strcat(full_path, "/");
-	ft_strcat(full_path, path_to_add);
-	return (full_path);
-}
-
-int do_get(int socket, char *command, char *path)
-{
-	char		**args;
-	int			len;
-	int			fd;
-	struct stat	file_info;	
-	char		*full_path;
-	char		buffer[4096];
-	int			file_size;
-	int			bytes_read;
-
-	args = ft_strsplit(command, ' ');
-	len = ft_lstlen(args);
-	if (len != 2)
-		return (0);
-
-	// Get full path of the file that's been requested.
-
-	full_path = get_full_path(path, args[1]);
-	printf("%s\n", full_path);
-
-	// Open the file. If error, the file doesn't exist.
-
-	if ((fd = open(full_path, O_RDONLY)) == -1)
-	{
-		perror("open file");
-		return (0);
-	}
-
-	// Get file size information.
-
-	fstat(fd, &file_info);
-	file_size = file_info.st_size;
+	int sd;
+	int enable;
+	struct sockaddr_in address;
 	
-	// Send file_size to client.
+	error_check((sd = socket(AF_INET, SOCK_STREAM, 0)), "socket");
+	enable = 1;
+	ft_memset(&address, 0, SOCK_SIZE);
+	address.sin_family = AF_INET;
+	address.sin_addr.s_addr = INADDR_ANY;
+	address.sin_port = htons(ft_atoi(port));
+	error_check(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)), "setsockopt");
+	error_check(bind(sd, (struct sockaddr *) &address, sizeof(address)), "bind");
+	error_check(listen(sd, 5), "listen");
+	return (sd);
+}
+
+void handle_client(int client, struct sockaddr_in client_info)
+{
+	char command[256];
 	
-	send(socket, &file_size, sizeof(file_size), 0);
-
-	/* --------------------------------------------------------- */
-
-	// Send file contents while read returns something greater than 0 and file_size is greater than 0.
-	// Make amount of bytes read (i.e 3rd argument in read) be dynamic.
+	printf("Client %s:%d connected.\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port));
 	
-
-
-	while ((bytes_read = read(fd, buffer, 255) > 0) && (file_size > 0))
+	ft_memset(command, 0, sizeof(command));
+	while (recv(client, command, sizeof(command), 0))
 	{
-		send(socket, &buffer, sizeof(bytes_read), 0);
-		file_size -= bytes_read;
+		if (!do_op(client, command))
+			break;
+		ft_memset(command, 0, sizeof(command));
 	}
-
-	close(fd);
-	return (0);
+	close(client);
 }
 
-int do_op(int socket, char *command, char *path)
+void serve_clients(int sd)
 {
-    if (ft_strnequ(command, "ls", 2))
+	int client;
+	socklen_t size;
+    struct sockaddr_in client_info;
+	
+	size = sizeof(client_info);
+	ft_memset(&client_info, 0, size);
+    while ((client = error_check(accept(sd, (struct sockaddr *) &client_info, &size), "client")))
     {
-        execl("/bin/ls", "ls");
-    }
-    if (ft_strnequ(command, "cd", 2))
-    {
-    }
-    if (ft_strnequ(command, "pwd", 3))
-    {
-    }
-    if (ft_strnequ(command, "get", 3))
-    {
-        return (do_get(socket, command, path));
-    }
-    if (ft_strnequ(command, "put", 3))
-    {
-    }
-    if (ft_strnequ(command, "quit", 4))
-    {
-        return (do_close(socket));
-    }
-    return (1);
-}
-
-char *create_directory(void)
-{
-    char *path;
-	int path_size = 256;
-
-    if ((path = malloc(sizeof(char) * path_size)) == NULL)
-        return (NULL);
-    getcwd(path, path_size);
-    ft_strcat(path, "/root");
-    mkdir(path, 0700);
-    chdir(path);
-    return (path);
-}
-
-int create_socket(void)
-{
-    int server_socket;
-    int option_value;
-
-    if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-    {
-        perror("socket");
-        exit(-1);
-    }
-    setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &option_value, sizeof(option_value));
-    return (server_socket);	
-}
-
-void bind_socket(int server_socket, int port)
-{
-    struct sockaddr_in address;
-
-    address.sin_family = AF_INET;
-    address.sin_port = htons(port);
-    address.sin_addr.s_addr = INADDR_ANY;
-    if (bind(server_socket, (struct sockaddr *) &address, sizeof(address)) == -1)
-    {
-        perror("bind");
-        exit(-1);
-    }
+        if (fork() == 0)
+        {
+			handle_client(client, client_info);
+			return;
+        }
+        else
+            close(client);
+	}
 }
 
 int main(int argc, char *argv[])
 {
-    int		client_socket;
-    int		server_socket;
-    char	buffer[256];
-    char	*path;
-
-    if (argc < 2)
-        return (error("Usage: ./server port", -1));
-
-    ft_memset(buffer, 0, sizeof(buffer));
-
-    path = create_directory();
-    server_socket = create_socket();	
-    bind_socket(server_socket, ft_atoi(argv[1]));
-    listen(server_socket, 3);
-
-    printf("waiting for connection...\n");
-
-    struct sockaddr_in client_info;
-    socklen_t size = sizeof(client_info);
-    pid_t pid;
-
-    while ((client_socket = accept(server_socket, (struct sockaddr *) &client_info, &size)))
+    if (argc != 2)
     {
-        if (client_socket == -1)
-        {
-            perror("client socket");
-            exit(-1);
-        }
+        printf("Usage: ./s port\n");
+        exit(-1);
+    }
 
-        printf("client connected: %s:%d\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port));
+	int sd;
 
-        if ((pid = fork()) == -1)
-		{
-			perror("fork");
-            close(client_socket);
-		}
-        else if (pid == 0)
-        {
-            close(server_socket);
-			
-			// Send path to client.
-
-			send(client_socket, path, 256, 0);
-
-			int alive = 1;
-            while (alive)
-			{
-				// Get command from client.
-                
-				recv(client_socket, &buffer, sizeof(buffer), 0);
-                printf("%s:%d: %s\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port), buffer);
-                
-				// Execute command.
-
-				alive = do_op(client_socket, buffer, path);
-
-				// WTF?
-				/*	
-                send(client_socket, buffer, sizeof(buffer), 0);
-                ft_memset(buffer, 0, sizeof(buffer));
-				*/
-            }
-			close(client_socket);
-        }
-        else
-            close(client_socket);
-    }	
-
-    close(server_socket);
+	create_directory();
+	sd = create_socket(argv[1]); 
+	serve_clients(sd);
 }

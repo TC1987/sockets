@@ -6,7 +6,7 @@
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/02/28 03:27:28 by tcho              #+#    #+#             */
-/*   Updated: 2019/03/04 22:53:20 by tcho             ###   ########.fr       */
+/*   Updated: 2019/03/05 20:49:29 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,8 @@ int display(char *message, int code)
 	return (code);
 }
 
+// Need to find all instances of send_file_contents and make sure to display a message if file is not a regular file.
+
 int send_file_contents(int sd, int fd)
 {
     int file_size;
@@ -44,11 +46,11 @@ int send_file_contents(int sd, int fd)
 	struct stat fd_info;
 
     fstat(fd, &fd_info);
-	if (!S_ISREG(fd_info.st_mode))
+	if (fd == -1 || !S_ISREG(fd_info.st_mode))
 	{
 		file_size = -1;
 		send(sd, &file_size, sizeof(file_size), 0);
-		return (display("Not a regular file.", 1));
+		return (display("Must be a valid file.", 0));
 	}
     file_size = fd_info.st_size;
     send(sd, &file_size, sizeof(file_size), 0);
