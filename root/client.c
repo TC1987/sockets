@@ -14,6 +14,7 @@
 #define SIZE 256
 
 char	g_message[4096];
+int		g_status;
 
 int error(char *message, int code)
 {
@@ -40,9 +41,9 @@ int put_file(int sd, char *command)
 	file = ft_strrchr(command, ' ') + 1;
     if ((fd = open(file, O_RDONLY)) == -1)
 		return (display("File does not exist or you do not have permissions.", 1));
-   	send(sd, command, ft_strlen(command), 0);
-	if (send_file_contents(sd, fd))
-		printf("%s has been successfully uploaded.\n", file);
+	send(sd, command, ft_strlen(command), 0);
+	send_file_contents(sd, fd);
+	printf("%s has been successfully sent.\n", file);
 	return (1);
 }
 
@@ -61,7 +62,8 @@ void read_file(char *file)
 	close(fd);
 }
 
-void write_file_contents(int sd, int file_size, char *file_name)
+// Change to write_file_contents.
+void write_file(int sd, int file_size, char *file_name)
 {
     int fd;
     int nbytes;
@@ -79,14 +81,15 @@ void write_file_contents(int sd, int file_size, char *file_name)
     close(fd);
 }
 
-int write_file(int sd, char *file_name)
+// Change to write_file.
+int get_file_contents(int sd, char *file_name)
 {
 	int file_size;
 
     recv(sd, &file_size, sizeof(file_size), 0);
 	if (file_size == -1)
-		return (display("You do not have permissions to this file or it does not exist.", 0));
-	write_file_contents(sd, file_size, file_name);
+		return (display("Must be a regular file.", 1));
+	write_file(sd, file_size, file_name);
 	return (1);
 }
 
@@ -95,18 +98,23 @@ int get_file(int sd, char *command)
 	char *file_name;
 
 	if (ft_word_count(command, ' ') != 2)
-		return (display("Usage: get file_name", 1));
+		return (display("Usage: get file", 1));
 	send(sd, command, ft_strlen(command), 0);
+	/*
+	recv(sd, &g_status, sizeof(g_status), 0);
+	if (!g_status)
+		return (display("You do not have permissions to this file or it does not exist.", 1));
+	*/
 	file_name = ft_strrchr(command, '/') ? ft_strrchr(command, '/') + 1 : ft_strrchr(command, ' ') + 1;
-	if (write_file(sd, file_name))
-		printf("%s has successfully downloaded.\n", file_name);
+	get_file_contents(sd, file_name);
+	printf("%s has successfully downloaded.\n", file_name);
 	return (1);
 }
 
 int do_ls(int sd, char *command)
 {
 	send(sd, command, ft_strlen(command), 0);
-	write_file(sd, ".ls");
+	get_file_contents(sd, ".ls");
 	read_file(".ls");
 	unlink(".ls");
 	return (1);
