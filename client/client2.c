@@ -13,7 +13,8 @@
 
 #define SIZE 256
 
-char g_message[4096];
+char	g_message[4096];
+int		g_status;
 
 int error(char *message, int code)
 {
@@ -99,6 +100,11 @@ int get_file(int sd, char *command)
 	if (ft_word_count(command, ' ') != 2)
 		return (display("Usage: get file", 1));
 	send(sd, command, ft_strlen(command), 0);
+	/*
+	recv(sd, &g_status, sizeof(g_status), 0);
+	if (!g_status)
+		return (display("You do not have permissions to this file or it does not exist.", 1));
+	*/
 	file_name = ft_strrchr(command, '/') ? ft_strrchr(command, '/') + 1 : ft_strrchr(command, ' ') + 1;
 	get_file_contents(sd, file_name);
 	printf("%s has successfully downloaded.\n", file_name);
@@ -170,7 +176,7 @@ int create_and_connect(char *ip_address, char *port)
 	int sd;
 	struct sockaddr_in address;
 
-	error_check((sd = socket(AF_INET, SOCK_STREAM, 0)), "create");
+	error_check((sd = socket(AF_INET, SOCK_STREAM, 0)), "socket");
 	ft_memset(&address, 0, sizeof(address));
 	address.sin_family = AF_INET;
 	address.sin_addr.s_addr = inet_addr(ip_address);;

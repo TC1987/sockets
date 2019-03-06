@@ -60,6 +60,7 @@ int send_ls(int sd, char *command)
 	if (pid == 0)
 	{
 		dup2(fd, 1);
+		dup2(fd, 2);
 		execv("/bin/ls", args);
 	}
 	else
@@ -137,15 +138,15 @@ int create_socket(char *port)
 	int enable;
 	struct sockaddr_in address;
 	
-	sd = socket(AF_INET, SOCK_STREAM, 0);
+	error_check((sd = socket(AF_INET, SOCK_STREAM, 0)), "socket");
 	enable = 1;
 	ft_memset(&address, 0, SOCK_SIZE);
 	address.sin_family = AF_INET;
 	address.sin_addr.s_addr = INADDR_ANY;
 	address.sin_port = htons(ft_atoi(port));
-	setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
-	bind(sd, (struct sockaddr *) &address, sizeof(address));
-	listen(sd, 5);
+	error_check(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)), "setsockopt");
+	error_check(bind(sd, (struct sockaddr *) &address, sizeof(address)), "bind");
+	error_check(listen(sd, 5), "listen");
 	return (sd);
 }
 
@@ -158,7 +159,7 @@ void handle_client(int client, struct sockaddr_in client_info)
 	ft_memset(command, 0, sizeof(command));
 	while (recv(client, command, sizeof(command), 0))
 	{
-		if (do_op(client, command) == 0)
+		if (!do_op(client, command))
 			break;
 		ft_memset(command, 0, sizeof(command));
 	}
