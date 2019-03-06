@@ -41,7 +41,7 @@ int put_file(int sd, char *command)
 	file = ft_strrchr(command, ' ') + 1;
     if ((fd = open(file, O_RDONLY)) == -1)
 		return (display("File does not exist or you do not have permissions.", 1));
-	send(sd, command, ft_strlen(command), 0);
+   	send(sd, command, ft_strlen(command), 0);
 	if (send_file_contents(sd, fd))
 		printf("%s has been successfully sent.\n", file);
 	return (1);
