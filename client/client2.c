@@ -13,13 +13,19 @@
 
 #define SIZE 256
 
-// 1. rm
-// 2. mkdir
-// 3. get completion
-// 4. put completion
-// 5. lls, lcd, lpwd
+// 1. rm - DONE
+// 2. mkdir - DONE
+// 3. get completion - DONE
+// 4. put completion - DONE
+// 5. lls, lcd, lpwd - DONE
 
 char	g_message[4096];
+char	g_cwd[4096];
+
+void prompt(void)
+{
+	printf("");
+}
 
 int error(char *message, int code)
 {
@@ -34,7 +40,8 @@ int check_command(char *command)
 		ft_strnequ(command, "put", 3) || ft_strnequ(command, "quit", 4) ||
 		ft_strnequ(command, "lrm", 2) || ft_strnequ(command, "lcd", 3) ||
 		ft_strnequ(command, "lls", 3) || ft_strnequ(command, "lpwd", 4) ||
-		ft_strnequ(command, "lmkdir", 6))
+		ft_strnequ(command, "lmkdir", 6) || ft_strnequ(command, "rm", 2) ||
+		ft_strnequ(command, "mkdir", 5))
 		return (1);
 	return (0);
 }
@@ -51,7 +58,7 @@ int put_file(int sd, char *command)
 		return (display("File does not exist or you do not have permissions.", 1));
    	send(sd, command, ft_strlen(command), 0);
 	if (send_file_contents(sd, fd))
-		printf("%s has been successfully uploaded.\n", file);
+		printf("%s has finished uploading.\n", file);
 	return (1);
 }
 
@@ -82,6 +89,8 @@ void write_file_contents(int sd, int file_size, char *file_name)
     error_check((fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0777)), "open");
     while (remaining > 0 && (nbytes = recv(sd, buffer, file_size, 0)) > 0)
     {
+		if (!ft_strequ(file_name, ".ls"))
+			printf("%d / %d bytes received\n", nbytes, file_size);
         write(fd, buffer, nbytes);
         remaining -= nbytes;
     }
@@ -164,17 +173,33 @@ int do_lrm(char *command)
 	else
 	{
 		file = ft_strrchr(command, ' ') + 1;
-		unlink(file);
+		if (!error_check_return(unlink(file), "lrm"))
+			return (1);
+		printf("success: %s has been removed\n", file);
 	}
 	return (1);
 }
 
 int do_lcd(char *command)
 {
+	char *cwd;
 	char *path;
-
-	path = ft_strrchr(command, ' ') + 1;
-	chdir(path);
+	
+	if (ft_word_count(command, ' ') != 2)
+		printf("usage: lcd [path]");
+	else
+	{
+		path = ft_strrchr(command, ' ') + 1;
+		if (!error_check_return(chdir(path), "lcd"))
+			return (1);
+		else
+		{
+			cwd = getcwd(NULL, 0);
+			ft_strcpy(g_cwd, cwd);
+			printf("%s\n", g_cwd);
+			free(cwd);
+		}
+	}
 	return (1);
 }
 
@@ -190,22 +215,22 @@ int do_lls(char *command)
 	else
 	{
 		wait4(pid, NULL, 0, NULL);
-		// free_list(args);
+		free_list(args);
 	}
 	return (1);
 }
 
 int do_lpwd(char *command)
 {
-	char *pwd;
+	char *cwd;
 
 	if (ft_word_count(command, ' ') != 1)
 		printf("usage: lpwd\n");
 	else
 	{
-		pwd = getcwd(NULL, 0);
-		printf("%s\n", pwd);
-		free(pwd);
+		cwd = getcwd(NULL, 0);
+		printf("%s\n", cwd);
+		free(cwd);
 	}
 	return (1);
 }
@@ -214,8 +239,41 @@ int do_lmkdir(char *command)
 {
 	char *directory;
 
-	directory = ft_strrchr(command, ' ') + 1;
-	mkdir(directory, 0777);
+	if (ft_word_count(command, ' ') != 2)
+		printf("usage: lmkdir [directory]\n");
+	else
+	{
+		directory = ft_strrchr(command, ' ') + 1;
+		error_check_return(mkdir(directory, 0777), "lmkdir");
+	}
+	return (1);
+}
+
+// Can combine do_cd, do_rm, and do_mkdir.
+
+int do_rm(int sd, char *command)
+{
+	if (ft_word_count(command, ' ') != 2)
+		printf("usage: rm [file]\n");
+	else
+	{
+		send(sd, command, ft_strlen(command), 0);
+		recv(sd, g_message, sizeof(g_message), 0);
+		printf("%s\n", g_message);
+	}
+	return (1);
+}
+
+int do_mkdir(int sd, char *command)
+{
+	if (ft_word_count(command, ' ') != 2)
+		printf("usage: mkdir [path]\n");
+	else
+	{
+		send(sd, command, ft_strlen(command), 0);
+		recv(sd, g_message, sizeof(g_message), 0);
+		printf("%s\n", g_message);
+	}
 	return (1);
 }
 
@@ -243,6 +301,10 @@ int do_op(int socket, char *command)
 		return (do_lpwd(command));
 	if (ft_strnequ(command, "lmkdir", 6))
 		return (do_lmkdir(command));
+	if (ft_strnequ(command, "rm", 2))
+		return (do_rm(socket, command));
+	if (ft_strnequ(command, "mkdir", 5))
+		return (do_mkdir(socket, command));
 	return (0);
 }
 
