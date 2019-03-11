@@ -57,7 +57,7 @@ int send_ls(int sd, char *command)
 	pid_t pid;
 	char **args;
 
-	error_check((fd = open(".ls", O_RDWR | O_TRUNC | O_CREAT, 0666)), "open");
+	error_check((fd = open(".ls", O_RDWR | O_TRUNC | O_CREAT, 0777)), "open");
 	args = ft_strsplit(command, ' ');
 	error_check((pid = fork()), "fork");
 	if (pid == 0)
@@ -97,19 +97,16 @@ int change_dir(int sd, char *command)
 
 	path = ft_strrchr(command, ' ') + 1;
 	current_path = ft_strdup(g_path);
-	if (chdir(path) == -1)
-		ft_strcpy(g_message, "You do not have permissions to this directory or it does not exist.");
-	else
+	ft_strcat(g_path, "/");
+	ft_strcat(g_path, path);
+	if (chdir(g_path) == -1 || !ft_strnequ(g_jail, getcwd(g_path, sizeof(g_path)), ft_strlen(g_jail)))
 	{
-		if (!ft_strnequ(g_jail, getcwd(g_path, sizeof(g_path)), ft_strlen(g_jail)))
-		{
-			ft_strcpy(g_path, current_path);
-			chdir(g_path);
-			ft_strcpy(g_message, "You do not have permissions to access this directory.");
-		}
-		else
-			ft_strcpy(g_message, g_path);
+		ft_strcpy(g_path, current_path);
+		chdir(g_path);
+		ft_strcpy(g_message, "Directory does not exist or you do not have permissions to access this directory.");
 	}
+	else
+		ft_strcpy(g_message, g_path);
 	send(sd, g_message, sizeof(g_message), 0);
 	free(current_path);
 	return (1);
@@ -177,7 +174,6 @@ int do_rm(int sd, char *command)
 			ft_strcpy(g_message, "The file does not exist or you do not have permissions.");
 		ft_strcpy(g_message, "The file has been deleted.");
 	}
-	printf("message: %s\n", g_message);
 	send(sd, g_message, sizeof(g_message), 0);
 	return (1);
 }
@@ -217,7 +213,7 @@ int do_op(int sd, char *command)
 	else if (ft_strnequ(command, "mkdir", 5))
 		return (do_mkdir(sd, command));
 	else if (ft_strnequ(command, "quit", 4))
-		return (display("user has disconnected.", 0));
+		return (0);
 	return (0);
 }
 
@@ -244,13 +240,16 @@ void handle_client(int client, struct sockaddr_in client_info)
 {
 	char command[256];
 	
-	printf("client %s:%d connected.\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port));
+	printf("%s:%d connected\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port));
 	
 	ft_memset(command, 0, sizeof(command));
 	while (recv(client, command, sizeof(command), 0))
 	{
 		if (!do_op(client, command))
+		{
+			printf("%s:%d disconnected\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port));
 			break;
+		}
 		ft_memset(command, 0, sizeof(command));
 	}
 	close(client);

@@ -72,12 +72,10 @@ void read_file(char *file)
 	char buffer[256];
 	int bytes;
 
+	ft_memset(buffer, 0, sizeof(buffer));
 	fd = open(file, O_RDONLY);
 	while ((bytes = read(fd, buffer, sizeof(buffer) - 1)) > 0)
-	{
-		buffer[bytes] = '\0';
 		printf("%s", buffer);
-	}
 	close(fd);
 }
 
@@ -90,7 +88,7 @@ void write_file_contents(int sd, int file_size, char *file_name)
 
     buffer = malloc(sizeof(char) * file_size);
 	remaining = file_size;
-    error_check((fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0777)), "open");
+    error_check((fd = open(file_name, O_RDWR | O_CREAT, 0777)), "open");
     while (remaining > 0 && (nbytes = recv(sd, buffer, file_size, 0)) > 0)
     {
 		if (!ft_strequ(file_name, ".ls"))
@@ -98,6 +96,7 @@ void write_file_contents(int sd, int file_size, char *file_name)
         write(fd, buffer, nbytes);
         remaining -= nbytes;
     }
+	free(buffer);
     close(fd);
 }
 
@@ -134,19 +133,6 @@ int do_ls(int sd, char *command)
 	return (1);
 }
 
-int do_cd(int sd, char *command)
-{
-	if (ft_word_count(command, ' ') != 2)
-		printf("usage: cd [path]\n");
-	else
-	{
-		send(sd, command, ft_strlen(command), 0);
-		recv(sd, g_message, sizeof(g_message), 0);
-		printf("%s\n", g_message);
-	}
-	return (1);
-}
-
 int do_quit(int sd, char *command)
 {
 	send(sd, command, ft_strlen(command), 0);
@@ -155,6 +141,7 @@ int do_quit(int sd, char *command)
 
 int get_pwd(int sd, char *command)
 {
+	ssize_t rec_bytes;
 	char buffer[SIZE];
 
 	if (ft_word_count(command, ' ') != 1)
@@ -162,7 +149,8 @@ int get_pwd(int sd, char *command)
 	else
 	{
 		send(sd, command, ft_strlen(command), 0);
-		recv(sd, buffer, sizeof(buffer), 0);
+		rec_bytes = recv(sd, buffer, sizeof(buffer), 0);
+		buffer[rec_bytes] = '\0';
 		printf("%s\n", buffer);
 	}
 	return (1);
@@ -253,31 +241,22 @@ int do_lmkdir(char *command)
 	return (1);
 }
 
-// Can combine do_cd, do_rm, and do_mkdir.
-
-int do_rm(int sd, char *command)
+int do_cd_rm_mkdir(int sd, char *command)
 {
+	ssize_t bytes_received;
+	char **args;
+
+	args = ft_strsplit(command, ' ');
 	if (ft_word_count(command, ' ') != 2)
-		printf("usage: rm [file]\n");
+		printf("usage: %s [file]\n", args[0]);
 	else
 	{
 		send(sd, command, ft_strlen(command), 0);
-		recv(sd, g_message, sizeof(g_message), 0);
+		bytes_received = recv(sd, g_message, sizeof(g_message), 0);
+		g_message[bytes_received] = '\0';
 		printf("%s\n", g_message);
 	}
-	return (1);
-}
-
-int do_mkdir(int sd, char *command)
-{
-	if (ft_word_count(command, ' ') != 2)
-		printf("usage: mkdir [path]\n");
-	else
-	{
-		send(sd, command, ft_strlen(command), 0);
-		recv(sd, g_message, sizeof(g_message), 0);
-		printf("%s\n", g_message);
-	}
+	free_list(args);
 	return (1);
 }
 
@@ -286,7 +265,7 @@ int do_op(int socket, char *command)
 	if (ft_strnequ(command, "ls", 2))
 		return (do_ls(socket, command));
 	if (ft_strnequ(command, "cd", 2))
-		return (do_cd(socket, command));
+		return (do_cd_rm_mkdir(socket, command));
 	if (ft_strnequ(command, "pwd", 3))
 		return (get_pwd(socket, command));
 	if (ft_strnequ(command, "get", 3))
@@ -306,9 +285,9 @@ int do_op(int socket, char *command)
 	if (ft_strnequ(command, "lmkdir", 6))
 		return (do_lmkdir(command));
 	if (ft_strnequ(command, "rm", 2))
-		return (do_rm(socket, command));
+		return (do_cd_rm_mkdir(socket, command));
 	if (ft_strnequ(command, "mkdir", 5))
-		return (do_mkdir(socket, command));
+		return (do_cd_rm_mkdir(socket, command));
 	return (0);
 }
 
