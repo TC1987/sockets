@@ -24,7 +24,11 @@ char	g_cwd[4096];
 
 void prompt(void)
 {
-	printf("");
+	printf("--------------------------------------------");
+	printf("-                                          -");
+	printf("-                FTP SERVER                -");
+	printf("-                                          -");
+	printf("--------------------------------------------");
 }
 
 int error(char *message, int code)
