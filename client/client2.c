@@ -16,16 +16,17 @@
 char	g_message[4096];
 char	g_cwd[4096];
 
-void prompt(char *ip_addr, char *port)
+void prompt(void)
 {
 	printf("--------------------------------------------\n");
 	printf("-                                          -\n");
 	printf("-                FTP SERVER                -\n");
 	printf("-                                          -\n");
-	printf("-                                          -\n");
-	printf("-            Connected to %s:%s            -\n", ip_addr, port);
-	printf("-                                          -\n");
 	printf("--------------------------------------------\n");
+	printf("                                            \n");
+	printf("Server Commands: ls cd pwd get put rm mkdir quit\n");
+	printf("Local Commands: lrm lcd lls lpwd lmkdir\n");
+	printf("\n");
 }
 
 int error(char *message, int code)
@@ -175,7 +176,7 @@ int do_lcd(char *command)
 	char *path;
 	
 	if (ft_word_count(command, ' ') != 2)
-		printf("usage: lcd [path]");
+		printf("usage: lcd [path]\n");
 	else
 	{
 		path = ft_strrchr(command, ' ') + 1;
@@ -309,13 +310,13 @@ int create_and_connect(char *ip_address, char *port)
 	return (sd);
 }
 
-void handle_requests(int sd, char *ip_addr, char *port)
+void handle_requests(int sd)
 {
 	int keep_alive;
 	char *command;
 
 	keep_alive = 1;
-	prompt(ip_addr, port);
+	prompt();
 	while (keep_alive)
 	{
 		ft_putstr(">> ");
@@ -341,6 +342,6 @@ int main(int argc, char *argv[])
 	int sd;
 
 	sd = create_and_connect(argv[1], argv[2]);
-	handle_requests(sd, argv[1], argv[2]);
+	handle_requests(sd);
     close(sd);
 }

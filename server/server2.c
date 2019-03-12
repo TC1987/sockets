@@ -91,6 +91,30 @@ int send_file(int sd, char *command)
 	return (1);
 }
 
+int check_dir(char *path)
+{
+	int i;
+	int status;
+	char *dir;
+	char *current_path;
+
+	i = 0;
+	status = 1;
+	if ((dir = ft_strrchr(path, '/')) == NULL)
+		return (-1);
+	while (&path[i] != dir)
+		i++;
+	dir = ft_strndup(path, i);
+	current_path = ft_strdup(g_path);
+	if (chdir(dir) == -1 || (!ft_strnequ(g_jail, getcwd(g_path, sizeof(g_path)), ft_strlen(g_jail))))
+		status = 0;
+	ft_strcpy(g_path, current_path);
+	chdir(g_path);
+	free(dir);
+	free(current_path);
+	return (status);	
+}
+
 int change_dir(int sd, char *command)
 {
 	char *path;
@@ -98,13 +122,11 @@ int change_dir(int sd, char *command)
 
 	path = ft_strrchr(command, ' ') + 1;
 	current_path = ft_strdup(g_path);
-	ft_strcat(g_path, "/");
-	ft_strcat(g_path, path);
-	if (chdir(g_path) == -1 || !ft_strnequ(g_jail, getcwd(g_path, sizeof(g_path)), ft_strlen(g_jail)))
+	if (chdir(path) == -1 || !ft_strnequ(g_jail, getcwd(g_path, sizeof(g_path)), ft_strlen(g_jail)))
 	{
 		ft_strcpy(g_path, current_path);
 		chdir(g_path);
-		ft_strcpy(g_message, "Directory does not exist or you do not have permissions to access this directory.");
+		ft_strcpy(g_message, "Error: Invalid path or outside of working directory.");
 	}
 	else
 		ft_strcpy(g_message, g_path);
@@ -119,56 +141,19 @@ int send_pwd(int sd)
 	return (1);
 }
 
-int check_dir(char *path)
-{
-	int i;
-	int status;
-	char *dir;
-	char *current_path;
-
-	i = 0;
-	status = 1;
-	if ((dir = ft_strrchr(path, '/')) == NULL)
-		return (1);
-	while (&path[i] != dir)
-		i++;
-	dir = ft_strndup(path, i);
-	current_path = ft_strdup(g_path);
-	if (chdir(dir) == -1 || (!ft_strnequ(g_jail, getcwd(g_path, sizeof(g_path)), ft_strlen(g_jail))))
-	{
-		status = 0;
-		ft_strcpy(g_path, current_path);
-		chdir(g_path);
-	}
-	free(dir);
-	free(current_path);
-	return (status);	
-}
-
 int do_rm(int sd, char *command)
 {
 	char *file;
 
 	file = ft_strrchr(command, ' ') + 1;
-	if (*file == '/')
-	{
-		if (!ft_strnequ(g_jail, file, ft_strlen(g_jail)))
-			ft_strcpy(g_message, "The file you're trying to remove exists outside of your working directory.");
-		else if (unlink(file) == -1)
-			ft_strcpy(g_message, "There was an error removing the file; the file does not exist.");
-		else
-		{
-			ft_strcpy(g_message, file);
-			ft_strcat(g_message, " has been successfully removed.");
-		}
-	}	
+	if (!check_dir(file))
+		ft_strcpy(g_message, "Error: File exists outside of your working directory.");
+	else if (unlink(file) == -1)
+		ft_strcpy(g_message, "Error: File does not exist or you do not have permissions to delete.");
 	else
 	{
-		if (!check_dir(file))
-			ft_strcpy(g_message, "The file you're trying to remove exists outside of your working directory.");
-		if (unlink(file) == -1)
-			ft_strcpy(g_message, "The file does not exist or you do not have permissions.");
-		ft_strcpy(g_message, "The file has been deleted.");
+		ft_strcpy(g_message, file);
+		ft_strcat(g_message, " has been successfully removed.");
 	}
 	send(sd, g_message, sizeof(g_message), 0);
 	return (1);
@@ -181,13 +166,14 @@ int do_mkdir(int sd, char *command)
 
 	dir = ft_strrchr(command, ' ') + 1;
 	if (!check_dir(dir))
-		ft_strcpy(g_message, "You are trying to create a directory outside of your working directory.");
-	folder_name = ft_strrchr(dir, '/');
-	if (folder_name)
-		mkdir(folder_name, 0777);
+		ft_strcpy(g_message, "Error: Cannot create a directory outside of your working directory.");
 	else
-		mkdir(dir, 0777);
-	ft_strcpy(g_message, "The folder has been successfully created.");
+	{
+		folder_name = ft_strrchr(dir, '/') ? ft_strrchr(dir, '/') : dir;
+		mkdir(folder_name, 0777);
+		ft_strcpy(g_message, folder_name); 
+		ft_strcat(g_message, " has been successfully created.");
+	}
 	send(sd, g_message, sizeof(g_message), 0);
 	return (1);
 }
