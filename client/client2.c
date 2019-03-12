@@ -116,7 +116,7 @@ int get_file(int sd, char *command)
 	if (ft_word_count(command, ' ') != 2)
 		return (display("usage: get [file_name]", 1));
 	send(sd, command, ft_strlen(command), 0);
-	file_name = ft_strrchr(command, '/') ? ft_strrchr(command, '/') + 1 : ft_strrchr(command, ' ') + 1;
+	file_name = ft_strrchr(command, ' ') + 1;
 	if (write_file(sd, file_name))
 		printf("%s has successfully downloaded.\n", file_name);
 	return (1);
