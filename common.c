@@ -6,7 +6,7 @@
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/02/28 03:27:28 by tcho              #+#    #+#             */
-/*   Updated: 2019/03/06 21:42:53 by tcho             ###   ########.fr       */
+/*   Updated: 2019/03/11 20:02:02 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,32 +62,41 @@ int display(char *message, int code)
 	return (code);
 }
 
-// Need to find all instances of send_file_contents and make sure to display a message if file is not a regular file.
+int check_file(int sd, int fd, struct stat fd_info)
+{
+	int file_size;
+
+	if (fd == -1 || !S_ISREG(fd_info.st_mode))
+	{
+		file_size = -1;
+		send(sd, &file_size, sizeof(file_size), 0);
+		return (0);
+	}
+	return (1);
+}
 
 int send_file_contents(int sd, int fd)
 {
     int file_size;
     int nbytes;
     char *file_ptr;
+	char *head;
 	struct stat fd_info;
 
     fstat(fd, &fd_info);
-	if (fd == -1 || !S_ISREG(fd_info.st_mode))
-	{
-		file_size = -1;
-		send(sd, &file_size, sizeof(file_size), 0);
-		return (display("Must be a valid file.", 0));
-	}
+	if (!check_file(sd, fd, fd_info))
+		return (display("Uploads are restricted to regular files.", 0));
     file_size = fd_info.st_size;
     send(sd, &file_size, sizeof(file_size), 0);
-    file_ptr = mmap(NULL, fd_info.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    file_ptr = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
+	head = file_ptr;
     while (file_size > 0 && ((nbytes = send(sd, file_ptr, fd_info.st_size, 0)) != -1))
     {
 		printf("%d / %lld bytes sent\n", nbytes, fd_info.st_size);
         file_ptr += nbytes;
         file_size -= nbytes;
     }
-    munmap(file_ptr, fd_info.st_size);
+    munmap(head, fd_info.st_size);
     close(fd);
 	return (1);
 }

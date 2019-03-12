@@ -13,22 +13,19 @@
 
 #define SIZE 256
 
-// 1. rm - DONE
-// 2. mkdir - DONE
-// 3. get completion - DONE
-// 4. put completion - DONE
-// 5. lls, lcd, lpwd - DONE
-
 char	g_message[4096];
 char	g_cwd[4096];
 
-void prompt(void)
+void prompt(char *ip_addr, char *port)
 {
-	printf("--------------------------------------------");
-	printf("-                                          -");
-	printf("-                FTP SERVER                -");
-	printf("-                                          -");
-	printf("--------------------------------------------");
+	printf("--------------------------------------------\n");
+	printf("-                                          -\n");
+	printf("-                FTP SERVER                -\n");
+	printf("-                                          -\n");
+	printf("-                                          -\n");
+	printf("-            Connected to %s:%s            -\n", ip_addr, port);
+	printf("-                                          -\n");
+	printf("--------------------------------------------\n");
 }
 
 int error(char *message, int code)
@@ -260,6 +257,21 @@ int do_cd_rm_mkdir(int sd, char *command)
 	return (1);
 }
 
+int do_local(char *command)
+{
+	if (ft_strnequ(command, "lrm", 2))
+		return (do_lrm(command));
+	if (ft_strnequ(command, "lcd", 3))
+		return (do_lcd(command));
+	if (ft_strnequ(command, "lls", 3))
+		return (do_lls(command));
+	if (ft_strnequ(command, "lpwd", 4))
+		return (do_lpwd(command));
+	if (ft_strnequ(command, "lmkdir", 6))
+		return (do_lmkdir(command));
+	return (0);
+}
+
 int do_op(int socket, char *command)
 {
 	if (ft_strnequ(command, "ls", 2))
@@ -272,22 +284,14 @@ int do_op(int socket, char *command)
 		return (get_file(socket, command));
 	if (ft_strnequ(command, "put", 3))
 		return (put_file(socket, command));
-	if (ft_strnequ(command, "quit", 4))
-		return (do_quit(socket, command));
-	if (ft_strnequ(command, "lrm", 2))
-		return (do_lrm(command));
-	if (ft_strnequ(command, "lcd", 3))
-		return (do_lcd(command));
-	if (ft_strnequ(command, "lls", 3))
-		return (do_lls(command));
-	if (ft_strnequ(command, "lpwd", 4))
-		return (do_lpwd(command));
-	if (ft_strnequ(command, "lmkdir", 6))
-		return (do_lmkdir(command));
 	if (ft_strnequ(command, "rm", 2))
 		return (do_cd_rm_mkdir(socket, command));
 	if (ft_strnequ(command, "mkdir", 5))
 		return (do_cd_rm_mkdir(socket, command));
+	if (ft_strnequ(command, "quit", 4))
+		return (do_quit(socket, command));
+	if (do_local(command))
+		return (1);
 	return (0);
 }
 
@@ -305,12 +309,13 @@ int create_and_connect(char *ip_address, char *port)
 	return (sd);
 }
 
-void handle_requests(int sd)
+void handle_requests(int sd, char *ip_addr, char *port)
 {
 	int keep_alive;
 	char *command;
 
 	keep_alive = 1;
+	prompt(ip_addr, port);
 	while (keep_alive)
 	{
 		ft_putstr(">> ");
@@ -336,7 +341,6 @@ int main(int argc, char *argv[])
 	int sd;
 
 	sd = create_and_connect(argv[1], argv[2]);
-    printf("connection to %s:%s successful.\n", argv[1], argv[2]);
-	handle_requests(sd);
+	handle_requests(sd, argv[1], argv[2]);
     close(sd);
 }

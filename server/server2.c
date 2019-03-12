@@ -26,10 +26,10 @@ int get_file(int sd, char *command)
 
     recv(sd, &file_size, sizeof(file_size), 0);
 	if (file_size == -1)
-		return (display("Must be a regular file.", 1));
+		return (display("Must be a valid file.", 1));
 	remaining = file_size;
     buffer = malloc(sizeof(char) * file_size);
-	file_name = ft_strrchr(command, '/') ? ft_strrchr(command, '/') + 1 : ft_strrchr(command, ' ') + 1;	
+	file_name = ft_strrchr(command, '/') ? ft_strrchr(command, '/') + 1 : ft_strrchr(command, ' ') + 1;
     error_check((fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0777)), "open");
     while (remaining > 0 && (nbytes = recv(sd, buffer, file_size, 0)) > 0)
     {
@@ -39,6 +39,7 @@ int get_file(int sd, char *command)
     }
     close(fd);
 	printf("%s has successfully downloaded.\n", file_name);
+	free(buffer);
 	return (1);
 }
 
@@ -118,8 +119,6 @@ int send_pwd(int sd)
 	return (1);
 }
 
-// For both of these functions, need to check if there is an absolute path or relative path that will allow the client to remove or create a new directory outside of their jail area.
-
 int check_dir(char *path)
 {
 	int i;
@@ -135,12 +134,9 @@ int check_dir(char *path)
 		i++;
 	dir = ft_strndup(path, i);
 	current_path = ft_strdup(g_path);
-	if (chdir(dir) == -1)
-		status = 0;
-	else
+	if (chdir(dir) == -1 || (!ft_strnequ(g_jail, getcwd(g_path, sizeof(g_path)), ft_strlen(g_jail))))
 	{
-		if (!ft_strnequ(g_jail, getcwd(g_path, sizeof(g_path)), ft_strlen(g_jail)))
-			status = 0;
+		status = 0;
 		ft_strcpy(g_path, current_path);
 		chdir(g_path);
 	}
