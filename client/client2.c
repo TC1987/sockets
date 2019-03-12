@@ -324,7 +324,9 @@ void handle_requests(int sd)
 		if (ft_strequ(command, ""))
 			continue;
 		else if (check_command(command) == 0)
-			printf("Not a valid command.\n");
+			printf("Error: Not a valid command.\n");
+		else if (ft_strchr(command, '/') != NULL)
+			printf("Error: Command cannot contain any slashes.\n");
 		else
 			keep_alive = do_op(sd, command);
 		free(command);
