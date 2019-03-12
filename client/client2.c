@@ -35,15 +35,20 @@ int error(char *message, int code)
 
 int check_command(char *command)
 {
-	if (ft_strnequ(command, "ls", 2) || ft_strnequ(command, "cd", 2) ||
-		ft_strnequ(command, "pwd", 3) || ft_strnequ(command, "get", 3) ||
-		ft_strnequ(command, "put", 3) || ft_strnequ(command, "quit", 4) ||
-		ft_strnequ(command, "lrm", 2) || ft_strnequ(command, "lcd", 3) ||
-		ft_strnequ(command, "lls", 3) || ft_strnequ(command, "lpwd", 4) ||
-		ft_strnequ(command, "lmkdir", 6) || ft_strnequ(command, "rm", 2) ||
-		ft_strnequ(command, "mkdir", 5))
-		return (1);
-	return (0);
+	int status;
+	char **args;
+
+	status = 0;
+	args = ft_strsplit(command, ' ');
+	if (ft_strequ(args[0], "ls") || ft_strequ(args[0], "cd") ||
+		ft_strequ(args[0], "pwd") || ft_strequ(args[0], "get") ||
+		ft_strequ(args[0], "put") || ft_strequ(args[0], "quit") ||
+		ft_strequ(args[0], "lrm") || ft_strequ(args[0], "lcd") ||
+		ft_strequ(args[0], "lls") || ft_strequ(args[0], "lpwd") ||
+		ft_strequ(args[0], "lmkdir") || ft_strequ(args[0], "rm") ||
+		ft_strequ(args[0], "mkdir"))
+			status = 1;
+	return (status);
 }
 
 int put_file(int sd, char *command)
