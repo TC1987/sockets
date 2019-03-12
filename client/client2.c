@@ -22,11 +22,9 @@ void prompt(void)
 	printf("-                                          -\n");
 	printf("-                FTP SERVER                -\n");
 	printf("-                                          -\n");
-	printf("--------------------------------------------\n");
-	printf("                                            \n");
-	printf("Server Commands: ls cd pwd get put rm mkdir quit\n");
-	printf("Local Commands: lrm lcd lls lpwd lmkdir\n");
-	printf("\n");
+	printf("--------------------------------------------\n\n");
+	printf("Server Commands: ls cd pwd get put rm mkdir quit\n\n");
+	printf("Local Commands: lrm lcd lls lpwd lmkdir\n\n");
 }
 
 int error(char *message, int code)
@@ -89,7 +87,7 @@ void write_file_contents(int sd, int file_size, char *file_name)
     error_check((fd = open(file_name, O_RDWR | O_CREAT, 0777)), "open");
     while (remaining > 0 && (nbytes = recv(sd, buffer, file_size, 0)) > 0)
     {
-		if (!ft_strequ(file_name, ".ls"))
+		if (!ft_strequ(file_name, ".tmp_ls"))
 			printf("%d / %d bytes received\n", nbytes, file_size);
         write(fd, buffer, nbytes);
         remaining -= nbytes;
@@ -111,23 +109,23 @@ int write_file(int sd, char *file_name)
 
 int get_file(int sd, char *command)
 {
-	char *file_name;
+	char *file;
 
 	if (ft_word_count(command, ' ') != 2)
 		return (display("usage: get [file_name]", 1));
 	send(sd, command, ft_strlen(command), 0);
-	file_name = ft_strrchr(command, ' ') + 1;
-	if (write_file(sd, file_name))
-		printf("%s has successfully downloaded.\n", file_name);
+	file = ft_strrchr(command, ' ') + 1;
+	if (write_file(sd, file))
+		printf("%s has successfully downloaded.\n", file);
 	return (1);
 }
 
 int do_ls(int sd, char *command)
 {
 	send(sd, command, ft_strlen(command), 0);
-	write_file(sd, ".ls");
-	read_file(".ls");
-	unlink(".ls");
+	write_file(sd, ".tmp_ls");
+	read_file(".tmp_ls");
+	unlink(".tmp_ls");
 	return (1);
 }
 
@@ -246,7 +244,14 @@ int do_cd_rm_mkdir(int sd, char *command)
 
 	args = ft_strsplit(command, ' ');
 	if (ft_word_count(command, ' ') != 2)
-		printf("usage: %s [file]\n", args[0]);
+	{
+		if (ft_strequ(args[0], "cd"))
+			printf("usage: cd [path]\n");
+		else if (ft_strequ(args[0], "rm"))
+			printf("usage: rm [file_name]\n");
+		else if (ft_strequ(args[0], "mkdir"))
+			printf("usage: mkdir [directory]\n");
+	}
 	else
 	{
 		send(sd, command, ft_strlen(command), 0);
@@ -335,14 +340,13 @@ void handle_requests(int sd)
 
 int main(int argc, char *argv[])
 {
+	int sd;
+
     if (argc != 3)
     {
         printf("usage: ./c [ip] [port]\n");
         exit(-1);
     }
-
-	int sd;
-
 	sd = create_and_connect(argv[1], argv[2]);
 	handle_requests(sd);
     close(sd);

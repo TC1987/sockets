@@ -29,7 +29,7 @@ int get_file(int sd, char *command)
 		return (display("Must be a valid file.", 1));
 	remaining = file_size;
     buffer = malloc(sizeof(char) * file_size);
-	file_name = ft_strrchr(command, '/') ? ft_strrchr(command, '/') + 1 : ft_strrchr(command, ' ') + 1;
+	file_name = ft_strrchr(command, ' ') + 1;
     error_check((fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0777)), "open");
     while (remaining > 0 && (nbytes = recv(sd, buffer, file_size, 0)) > 0)
     {
@@ -58,7 +58,7 @@ int send_ls(int sd, char *command)
 	pid_t pid;
 	char **args;
 
-	error_check((fd = open(".ls", O_RDWR | O_TRUNC | O_CREAT, 0777)), "open");
+	error_check((fd = open(".tmp_ls", O_RDWR | O_TRUNC | O_CREAT, 0777)), "open");
 	args = ft_strsplit(command, ' ');
 	error_check((pid = fork()), "fork");
 	if (pid == 0)
@@ -71,7 +71,7 @@ int send_ls(int sd, char *command)
 	{
 		wait4(pid, NULL, 0, NULL);
 		send_file_contents(sd, fd);
-		unlink(".ls");
+		unlink(".tmp_ls");
 		free_list(args);
 	}
 	return (1);
@@ -87,32 +87,8 @@ int send_file(int sd, char *command)
 	file = ft_strrchr(command, ' ') + 1;
     fd = open(file, O_RDONLY);
 	if (send_file_contents(sd, fd))
-		printf("%s has been successfully sent.\n", ft_strrchr(file, '/') ? ft_strrchr(file, '/') + 1 : file);
+		printf("%s has been successfully sent.\n", file);
 	return (1);
-}
-
-int check_dir(char *path)
-{
-	int i;
-	int status;
-	char *dir;
-	char *current_path;
-
-	i = 0;
-	status = 1;
-	if ((dir = ft_strrchr(path, '/')) == NULL)
-		return (-1);
-	while (&path[i] != dir)
-		i++;
-	dir = ft_strndup(path, i);
-	current_path = ft_strdup(g_path);
-	if (chdir(dir) == -1 || (!ft_strnequ(g_jail, getcwd(g_path, sizeof(g_path)), ft_strlen(g_jail))))
-		status = 0;
-	ft_strcpy(g_path, current_path);
-	chdir(g_path);
-	free(dir);
-	free(current_path);
-	return (status);	
 }
 
 int change_dir(int sd, char *command)
@@ -146,10 +122,8 @@ int do_rm(int sd, char *command)
 	char *file;
 
 	file = ft_strrchr(command, ' ') + 1;
-	if (!check_dir(file))
-		ft_strcpy(g_message, "Error: File exists outside of your working directory.");
-	else if (unlink(file) == -1)
-		ft_strcpy(g_message, "Error: File does not exist or you do not have permissions to delete.");
+	if (unlink(file) == -1)
+		ft_strcpy(g_message, "Error: Must be a valid file, exist, and have correct permissions set.");
 	else
 	{
 		ft_strcpy(g_message, file);
@@ -162,16 +136,16 @@ int do_rm(int sd, char *command)
 int do_mkdir(int sd, char *command)
 {
 	char *dir;
-	char *folder_name;
 
 	dir = ft_strrchr(command, ' ') + 1;
-	if (!check_dir(dir))
-		ft_strcpy(g_message, "Error: Cannot create a directory outside of your working directory.");
+	if (mkdir(dir, 0777) == -1)
+	{
+		ft_strcpy(g_message, dir);
+		ft_strcat(g_message, " already exists.");
+	}
 	else
 	{
-		folder_name = ft_strrchr(dir, '/') ? ft_strrchr(dir, '/') : dir;
-		mkdir(folder_name, 0777);
-		ft_strcpy(g_message, folder_name); 
+		ft_strcpy(g_message, dir); 
 		ft_strcat(g_message, " has been successfully created.");
 	}
 	send(sd, g_message, sizeof(g_message), 0);
@@ -223,7 +197,6 @@ void handle_client(int client, struct sockaddr_in client_info)
 	char command[256];
 	
 	printf("%s:%d connected\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port));
-	
 	ft_memset(command, 0, sizeof(command));
 	while (recv(client, command, sizeof(command), 0))
 	{
@@ -259,14 +232,13 @@ void serve_clients(int sd)
 
 int main(int argc, char *argv[])
 {
+	int sd;
+
     if (argc != 2)
     {
         printf("usage: ./s [port]\n");
         exit(-1);
     }
-
-	int sd;
-
 	create_directory();
 	sd = create_socket(argv[1]); 
 	serve_clients(sd);
