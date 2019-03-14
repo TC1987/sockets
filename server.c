@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   server.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2019/03/13 19:31:26 by tcho              #+#    #+#             */
+/*   Updated: 2019/03/13 21:48:25 by tcho             ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include <sys/socket.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -11,52 +23,50 @@
 
 #define SIZE 256
 
-char g_path[SIZE];
-char g_jail[SIZE];
-char g_message[4096];
+char	g_path[SIZE];
+char	g_jail[SIZE];
+char	g_message[4096];
 
-int get_file(int sd, char *command)
+int		get_file(int sd, char *command)
 {
-    int fd;
-	int remaining;
-    int file_size;
-    int nbytes;
-    char *buffer;
-	char *file_name;
+	int		fd;
+	int		remaining;
+	int		file_size;
+	int		nbytes;
+	char	*buffer;
 
-    recv(sd, &file_size, sizeof(file_size), 0);
+	recv(sd, &file_size, sizeof(int), 0);
 	if (file_size == -1)
 		return (display("Must be a valid file.", 1));
 	remaining = file_size;
-    buffer = malloc(sizeof(char) * file_size);
-	file_name = ft_strrchr(command, ' ') + 1;
-    error_check((fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0777)), "open");
-    while (remaining > 0 && (nbytes = recv(sd, buffer, file_size, 0)) > 0)
-    {
+	buffer = malloc(sizeof(char) * file_size);
+	error_check((fd = open(ft_strchr(command, ' ') + 1, O_WRONLY | O_CREAT | O_TRUNC, 0777)), "open");
+	while (remaining > 0 && (nbytes = recv(sd, buffer, file_size, 0)) > 0)
+	{
 		printf("%d / %d received\n", nbytes, file_size);
-        write(fd, buffer, nbytes);
-        remaining -= nbytes;
-    }
-    close(fd);
-	printf("%s has successfully downloaded.\n", file_name);
+		write(fd, buffer, nbytes);
+		remaining -= nbytes;
+	}
+	close(fd);
+	printf("%s has successfully downloaded.\n", ft_strchr(command, ' ') + 1);
 	free(buffer);
 	return (1);
 }
 
-void create_directory(void)
+void	create_directory(void)
 {
-    getcwd(g_path, sizeof(g_path));
-    ft_strcat(g_path, "/root");
-    mkdir(g_path, 0777);
-    chdir(g_path);
+	getcwd(g_path, sizeof(g_path));
+	ft_strcat(g_path, "/root");
+	mkdir(g_path, 0777);
+	chdir(g_path);
 	ft_memcpy(g_jail, g_path, sizeof(g_path));
 }
 
-int send_ls(int sd, char *command)
+int		send_ls(int sd, char *command)
 {
-	int fd;
-	pid_t pid;
-	char **args;
+	int		fd;
+	pid_t	pid;
+	char	**args;
 
 	error_check((fd = open(".tmp_ls", O_RDWR | O_TRUNC | O_CREAT, 0777)), "open");
 	args = ft_strsplit(command, ' ');
@@ -77,24 +87,24 @@ int send_ls(int sd, char *command)
 	return (1);
 }
 
-int send_file(int sd, char *command)
+int		send_file(int sd, char *command)
 {
-    int fd;
-	char *file;
+	int		fd;
+	char	*file;
 
 	if (ft_word_count(command, ' ') != 2)
 		return (1);
 	file = ft_strrchr(command, ' ') + 1;
-    fd = open(file, O_RDONLY);
+	fd = open(file, O_RDONLY);
 	if (send_file_contents(sd, fd))
 		printf("%s has been successfully sent.\n", file);
 	return (1);
 }
 
-int change_dir(int sd, char *command)
+int		change_dir(int sd, char *command)
 {
-	char *path;
-	char *current_path;
+	char	*path;
+	char	*current_path;
 
 	path = ft_strrchr(command, ' ') + 1;
 	current_path = ft_strdup(g_path);
@@ -102,7 +112,7 @@ int change_dir(int sd, char *command)
 	{
 		ft_strcpy(g_path, current_path);
 		chdir(g_path);
-		ft_strcpy(g_message, "Error: Invalid path or outside of working directory.");
+		ft_strcpy(g_message, "Error: Invalid path or not in directory.");
 	}
 	else
 		ft_strcpy(g_message, g_path);
@@ -111,19 +121,19 @@ int change_dir(int sd, char *command)
 	return (1);
 }
 
-int send_pwd(int sd)
+int		send_pwd(int sd)
 {
 	send(sd, g_path, ft_strlen(g_path), 0);
 	return (1);
 }
 
-int do_rm(int sd, char *command)
+int		do_rm(int sd, char *command)
 {
 	char *file;
 
 	file = ft_strrchr(command, ' ') + 1;
 	if (unlink(file) == -1)
-		ft_strcpy(g_message, "Error: Must be a valid file, exist, and have correct permissions set.");
+		ft_strcpy(g_message, "Invalid file or permissions.");
 	else
 	{
 		ft_strcpy(g_message, file);
@@ -133,7 +143,7 @@ int do_rm(int sd, char *command)
 	return (1);
 }
 
-int do_mkdir(int sd, char *command)
+int		do_mkdir(int sd, char *command)
 {
 	char *dir;
 
@@ -145,14 +155,14 @@ int do_mkdir(int sd, char *command)
 	}
 	else
 	{
-		ft_strcpy(g_message, dir); 
+		ft_strcpy(g_message, dir);
 		ft_strcat(g_message, " has been successfully created.");
 	}
 	send(sd, g_message, sizeof(g_message), 0);
 	return (1);
 }
 
-int do_op(int sd, char *command)
+int		do_op(int sd, char *command)
 {
 	if (ft_strnequ(command, "ls", 2))
 		return (send_ls(sd, command));
@@ -173,73 +183,78 @@ int do_op(int sd, char *command)
 	return (0);
 }
 
-int create_socket(char *port)
+int		create_socket(char *port)
 {
-	int sd;
-	int enable;
-	struct sockaddr_in address;
-	
+	int					sd;
+	int					enable;
+	struct sockaddr_in	address;
+
 	error_check((sd = socket(AF_INET, SOCK_STREAM, 0)), "socket");
 	enable = 1;
 	ft_memset(&address, 0, SOCK_SIZE);
 	address.sin_family = AF_INET;
 	address.sin_addr.s_addr = INADDR_ANY;
 	address.sin_port = htons(ft_atoi(port));
-	error_check(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)), "setsockopt");
-	error_check(bind(sd, (struct sockaddr *) &address, sizeof(address)), "bind");
+	error_check(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &enable,
+				sizeof(enable)), "setsockopt");
+	error_check(bind(sd, (struct sockaddr *)&address,
+				sizeof(address)), "bind");
 	error_check(listen(sd, 5), "listen");
 	printf("listening on port %s\n", port);
 	return (sd);
 }
 
-void handle_client(int client, struct sockaddr_in client_info)
+void	handle_client(int client, struct sockaddr_in client_info)
 {
 	char command[256];
-	
-	printf("%s:%d connected\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port));
+
+	printf("%s:%d connected\n", inet_ntoa(client_info.sin_addr),
+			ntohs(client_info.sin_port));
 	ft_memset(command, 0, sizeof(command));
-	while (recv(client, command, sizeof(command), 0))
+	while (recv(client, command, 256, 0))
 	{
 		if (!do_op(client, command))
 		{
-			printf("%s:%d disconnected\n", inet_ntoa(client_info.sin_addr), ntohs(client_info.sin_port));
-			break;
+			printf("%s:%d disconnected\n", inet_ntoa(client_info.sin_addr),
+					ntohs(client_info.sin_port));
+			break ;
 		}
 		ft_memset(command, 0, sizeof(command));
 	}
 	close(client);
 }
 
-void serve_clients(int sd)
+void	serve_clients(int sd)
 {
-	int client;
-	socklen_t size;
-    struct sockaddr_in client_info;
-	
+	int					client;
+	socklen_t			size;
+	struct sockaddr_in	client_info;
+
 	size = sizeof(client_info);
 	ft_memset(&client_info, 0, size);
-    while ((client = error_check(accept(sd, (struct sockaddr *) &client_info, &size), "client")))
-    {
-        if (fork() == 0)
-        {
+	while ((client =
+				error_check(accept(sd, (struct sockaddr *)&client_info, &size), "client")))
+	{
+		if (fork() == 0)
+		{
 			handle_client(client, client_info);
-			return;
-        }
-        else
-            close(client);
+			return ;
+		}
+		else
+			close(client);
 	}
 }
 
-int main(int argc, char *argv[])
+int		main(int argc, char *argv[])
 {
 	int sd;
 
-    if (argc != 2)
-    {
-        printf("usage: ./s [port]\n");
-        exit(-1);
-    }
+	if (argc != 2)
+	{
+		printf("usage: ./s [port]\n");
+		exit(-1);
+	}
 	create_directory();
-	sd = create_socket(argv[1]); 
+	sd = create_socket(argv[1]);
 	serve_clients(sd);
 }

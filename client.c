@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   client.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2019/03/13 19:24:09 by tcho              #+#    #+#             */
+/*   Updated: 2019/03/13 21:29:40 by tcho             ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdio.h>
@@ -16,7 +28,7 @@
 char	g_message[4096];
 char	g_cwd[4096];
 
-void prompt(void)
+void	prompt(void)
 {
 	printf("--------------------------------------------\n");
 	printf("-                                          -\n");
@@ -27,51 +39,54 @@ void prompt(void)
 	printf("Local Commands: lrm lcd lls lpwd lmkdir\n\n");
 }
 
-int error(char *message, int code)
+int		error(char *message, int code)
 {
 	printf("%s\n", message);
 	return (code);
 }
 
-int check_command(char *command)
+int		check_command(char *command)
 {
-	int status;
-	char **args;
+	int		status;
+	char	**args;
 
 	status = 0;
 	args = ft_strsplit(command, ' ');
 	if (ft_strequ(args[0], "ls") || ft_strequ(args[0], "cd") ||
-		ft_strequ(args[0], "pwd") || ft_strequ(args[0], "get") ||
-		ft_strequ(args[0], "put") || ft_strequ(args[0], "quit") ||
-		ft_strequ(args[0], "lrm") || ft_strequ(args[0], "lcd") ||
-		ft_strequ(args[0], "lls") || ft_strequ(args[0], "lpwd") ||
-		ft_strequ(args[0], "lmkdir") || ft_strequ(args[0], "rm") ||
-		ft_strequ(args[0], "mkdir"))
-			status = 1;
+			ft_strequ(args[0], "pwd") || ft_strequ(args[0], "get") ||
+			ft_strequ(args[0], "put") || ft_strequ(args[0], "quit") ||
+			ft_strequ(args[0], "lrm") || ft_strequ(args[0], "lcd") ||
+			ft_strequ(args[0], "lls") || ft_strequ(args[0], "lpwd") ||
+			ft_strequ(args[0], "lmkdir") || ft_strequ(args[0], "rm") ||
+			ft_strequ(args[0], "mkdir"))
+		status = 1;
 	return (status);
 }
 
-int put_file(int sd, char *command)
+int		put_file(int sd, char *command)
 {
-    int fd;
-	char *file;
+	int		fd;
+	char	*file;
+	char	buffer[256];
 
-	if (ft_word_count(command, ' ') != 2)
+	ft_memset(buffer, 0, 256);
+	ft_strcpy(buffer, command);
+	if (ft_word_count(buffer, ' ') != 2)
 		return (display("usage: put [file_name]", 1));
-	file = ft_strrchr(command, ' ') + 1;
-    if ((fd = open(file, O_RDONLY)) == -1)
-		return (display("File does not exist or you do not have permissions.", 1));
-   	send(sd, command, ft_strlen(command), 0);
+	file = ft_strrchr(buffer, ' ') + 1;
+	if ((fd = open(file, O_RDONLY)) == -1)
+		return (display("File not found or invalid permissions.", 1));
+	send(sd, buffer, 256, 0);
 	if (send_file_contents(sd, fd))
 		printf("%s has finished uploading.\n", file);
 	return (1);
 }
 
-void read_file(char *file)
+void	read_file(char *file)
 {
-	int fd;
-	char buffer[256];
-	int bytes;
+	int		fd;
+	char	buffer[256];
+	int		bytes;
 
 	ft_memset(buffer, 0, sizeof(buffer));
 	fd = open(file, O_RDONLY);
@@ -80,39 +95,39 @@ void read_file(char *file)
 	close(fd);
 }
 
-void write_file_contents(int sd, int file_size, char *file_name)
+void	write_file_contents(int sd, int file_size, char *file_name)
 {
-    int fd;
-    int nbytes;
-	int remaining;
-    char *buffer;
+	int		fd;
+	int		nbytes;
+	int		remaining;
+	char	*buffer;
 
-    buffer = malloc(sizeof(char) * file_size);
+	buffer = malloc(sizeof(char) * file_size);
 	remaining = file_size;
-    error_check((fd = open(file_name, O_RDWR | O_CREAT, 0777)), "open");
-    while (remaining > 0 && (nbytes = recv(sd, buffer, file_size, 0)) > 0)
-    {
+	error_check((fd = open(file_name, O_RDWR | O_CREAT, 0777)), "open");
+	while (remaining > 0 && (nbytes = recv(sd, buffer, file_size, 0)) > 0)
+	{
 		if (!ft_strequ(file_name, ".tmp_ls"))
 			printf("%d / %d bytes received\n", nbytes, file_size);
-        write(fd, buffer, nbytes);
-        remaining -= nbytes;
-    }
+		write(fd, buffer, nbytes);
+		remaining -= nbytes;
+	}
 	free(buffer);
-    close(fd);
+	close(fd);
 }
 
-int write_file(int sd, char *file_name)
+int		write_file(int sd, char *file_name)
 {
 	int file_size;
 
-    recv(sd, &file_size, sizeof(file_size), 0);
+	recv(sd, &file_size, sizeof(file_size), 0);
 	if (file_size == -1)
-		return (display("You do not have permissions to this file or it does not exist.", 0));
+		return (display("File not found or invalid permissions.", 0));
 	write_file_contents(sd, file_size, file_name);
 	return (1);
 }
 
-int get_file(int sd, char *command)
+int		get_file(int sd, char *command)
 {
 	char *file;
 
@@ -125,7 +140,7 @@ int get_file(int sd, char *command)
 	return (1);
 }
 
-int do_ls(int sd, char *command)
+int		do_ls(int sd, char *command)
 {
 	send(sd, command, ft_strlen(command), 0);
 	write_file(sd, ".tmp_ls");
@@ -134,16 +149,16 @@ int do_ls(int sd, char *command)
 	return (1);
 }
 
-int do_quit(int sd, char *command)
+int		do_quit(int sd, char *command)
 {
 	send(sd, command, ft_strlen(command), 0);
 	return (0);
 }
 
-int get_pwd(int sd, char *command)
+int		get_pwd(int sd, char *command)
 {
-	ssize_t rec_bytes;
-	char buffer[SIZE];
+	ssize_t	rec_bytes;
+	char	buffer[SIZE];
 
 	if (ft_word_count(command, ' ') != 1)
 		printf("usage: pwd\n");
@@ -157,7 +172,7 @@ int get_pwd(int sd, char *command)
 	return (1);
 }
 
-int do_lrm(char *command)
+int		do_lrm(char *command)
 {
 	char *file;
 
@@ -173,11 +188,11 @@ int do_lrm(char *command)
 	return (1);
 }
 
-int do_lcd(char *command)
+int		do_lcd(char *command)
 {
-	char *cwd;
-	char *path;
-	
+	char	*cwd;
+	char	*path;
+
 	if (ft_word_count(command, ' ') != 2)
 		printf("usage: lcd [path]\n");
 	else
@@ -196,10 +211,10 @@ int do_lcd(char *command)
 	return (1);
 }
 
-int do_lls(char *command)
+int		do_lls(char *command)
 {
-	pid_t pid;
-	char **args;
+	pid_t	pid;
+	char	**args;
 
 	args = ft_strsplit(command, ' ');
 	pid = fork();
@@ -213,7 +228,7 @@ int do_lls(char *command)
 	return (1);
 }
 
-int do_lpwd(char *command)
+int		do_lpwd(char *command)
 {
 	char *cwd;
 
@@ -228,7 +243,7 @@ int do_lpwd(char *command)
 	return (1);
 }
 
-int do_lmkdir(char *command)
+int		do_lmkdir(char *command)
 {
 	char *directory;
 
@@ -242,10 +257,10 @@ int do_lmkdir(char *command)
 	return (1);
 }
 
-int do_cd_rm_mkdir(int sd, char *command)
+int		do_cd_rm_mkdir(int sd, char *command)
 {
-	ssize_t bytes_received;
-	char **args;
+	ssize_t		bytes_received;
+	char		**args;
 
 	args = ft_strsplit(command, ' ');
 	if (ft_word_count(command, ' ') != 2)
@@ -268,7 +283,7 @@ int do_cd_rm_mkdir(int sd, char *command)
 	return (1);
 }
 
-int do_local(char *command)
+int		do_local(char *command)
 {
 	if (ft_strnequ(command, "lrm", 2))
 		return (do_lrm(command));
@@ -283,7 +298,7 @@ int do_local(char *command)
 	return (0);
 }
 
-int do_op(int socket, char *command)
+int		do_op(int socket, char *command)
 {
 	if (ft_strnequ(command, "ls", 2))
 		return (do_ls(socket, command));
@@ -306,24 +321,26 @@ int do_op(int socket, char *command)
 	return (0);
 }
 
-int create_and_connect(char *ip_address, char *port)
+int		create_and_connect(char *ip_address, char *port)
 {
-	int sd;
-	struct sockaddr_in address;
+	int					sd;
+	struct sockaddr_in	address;
 
 	error_check((sd = socket(AF_INET, SOCK_STREAM, 0)), "socket");
 	ft_memset(&address, 0, sizeof(address));
 	address.sin_family = AF_INET;
-	address.sin_addr.s_addr = ft_strequ(ip_address, "localhost") ? inet_addr("127.0.0.1") : inet_addr(ip_address);
+	address.sin_addr.s_addr = ft_strequ(ip_address, "localhost") ?
+		inet_addr("127.0.0.1") : inet_addr(ip_address);
 	address.sin_port = htons(ft_atoi(port));
-	error_check(connect(sd, (struct sockaddr *) &address, sizeof(address)), "connect");
+	error_check(connect(sd, (struct sockaddr *)&address, \
+				sizeof(address)), "connect");
 	return (sd);
 }
 
-void handle_requests(int sd)
+void	handle_requests(int sd)
 {
-	int keep_alive;
-	char *command;
+	int		keep_alive;
+	char	*command;
 
 	keep_alive = 1;
 	prompt();
@@ -343,16 +360,16 @@ void handle_requests(int sd)
 	}
 }
 
-int main(int argc, char *argv[])
+int		main(int argc, char *argv[])
 {
 	int sd;
 
-    if (argc != 3)
-    {
-        printf("usage: ./c [ip] [port]\n");
-        exit(-1);
-    }
+	if (argc != 3)
+	{
+		printf("usage: ./c [ip] [port]\n");
+		exit(-1);
+	}
 	sd = create_and_connect(argv[1], argv[2]);
 	handle_requests(sd);
-    close(sd);
+	close(sd);
 }
