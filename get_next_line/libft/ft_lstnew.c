@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   ft_strsub.c                                        :+:      :+:    :+:   */
+/*   ft_lstnew.c                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2018/10/22 03:08:53 by tcho              #+#    #+#             */
-/*   Updated: 2018/11/05 17:01:00 by tcho             ###   ########.fr       */
+/*   Created: 2018/10/18 00:19:57 by tcho              #+#    #+#             */
+/*   Updated: 2018/11/09 23:23:34 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,16 +14,27 @@
 #include <string.h>
 #include "libft.h"
 
-char	*ft_strsub(char const *s, unsigned int start, size_t len)
+t_list	*ft_lstnew(void const *content, size_t content_size)
 {
-	char	*str;
-	size_t	i;
+	t_list	*node;
+	size_t	size_copy;
+	void	*content_copy;
 
-	i = 0;
-	if (!(str = ft_strnew(len)))
+	if (!(node = (t_list *)malloc(sizeof(t_list))))
 		return (NULL);
-	while (s && s[start] && i < len)
-		str[i++] = s[start++];
-	str[i] = '\0';
-	return (str);
+	if (content)
+	{
+		size_copy = content_size;
+		content_copy = ft_memalloc(size_copy);
+		ft_memcpy(content_copy, content, size_copy);
+		node->content = content_copy;
+		node->content_size = size_copy;
+	}
+	else
+	{
+		node->content = NULL;
+		node->content_size = 0;
+	}
+	node->next = NULL;
+	return (node);
 }

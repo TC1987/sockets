@@ -1,39 +1,84 @@
-# **************************************************************************** #
-#                                                                              #
-#                                                         :::      ::::::::    #
-#    Makefile                                           :+:      :+:    :+:    #
-#                                                     +:+ +:+         +:+      #
-#    By: tcho <marvin@42.fr>                        +#+  +:+       +#+         #
-#                                                 +#+#+#+#+#+   +#+            #
-#    Created: 2018/11/05 02:16:34 by tcho              #+#    #+#              #
-#    Updated: 2018/11/05 02:35:01 by tcho             ###   ########.fr        #
-#                                                                              #
-# **************************************************************************** #
-
 NAME = libft.a
 BASE = ft_memset \
-	   ft_strdup \
-	   ft_strfind \
-	   ft_strjoin \
+	   ft_bzero \
+	   ft_memcpy \
+	   ft_memccpy \
+	   ft_memmove \
+	   ft_memchr \
+	   ft_memcmp \
 	   ft_strlen \
+	   ft_strdup \
+	   ft_strcpy \
+	   ft_strncpy \
+	   ft_strcat \
+	   ft_strncat \
+	   ft_strlcat \
+	   ft_strchr \
+	   ft_strrchr \
+	   ft_strstr \
+	   ft_strnstr \
+	   ft_strcmp \
+	   ft_strncmp \
+	   ft_atoi \
+	   ft_isalpha \
+	   ft_isdigit \
+	   ft_isalnum \
+	   ft_isascii \
+	   ft_isprint \
+	   ft_toupper \
+	   ft_tolower \
+	   ft_memalloc \
+	   ft_memdel \
 	   ft_strnew \
-	   ft_strsub
+	   ft_strdel \
+	   ft_strclr \
+	   ft_striter \
+	   ft_striteri \
+	   ft_strmap \
+	   ft_strmapi \
+	   ft_strequ \
+	   ft_strnequ \
+	   ft_strsub \
+	   ft_strjoin \
+	   ft_strtrim \
+	   ft_strsplit \
+	   ft_itoa \
+	   ft_putchar \
+	   ft_putstr \
+	   ft_putendl \
+	   ft_putnbr \
+	   ft_putchar_fd \
+	   ft_putstr_fd \
+	   ft_putendl_fd \
+	   ft_putnbr_fd \
+	   ft_lstnew \
+	   ft_lstdelone \
+	   ft_lstdel \
+	   ft_lstadd \
+	   ft_lstiter \
+	   ft_lstmap \
+	   ft_strfind \
+	   ft_word_count \
+	   ft_word_length \
+	   ft_isspace \
+	   ft_lstadd_r \
+	   ft_strndup \
+	   ft_strnnew
 SRC = $(addsuffix .c, $(BASE))
 OBJ = $(addsuffix .o, $(BASE))
-HEADER = -I includes
 CFLAGS = -Wall -Wextra -Werror -c
 
 all: $(NAME)
 
-$(NAME):
-	gcc $(CFLAGS) $(SRC) $(HEADER)
-	ar rc $(NAME) $(OBJ)
-	ranlib $(NAME)
+$(NAME): $(SRC)
+	@gcc $(CFLAGS) $(SRC) -I.
+	@ar rc $(NAME) $(OBJ)
+	@ranlib $(NAME)
 
 clean:
-	/bin/rm -f $(OBJ)
+	@/bin/rm -f $(OBJ)
 
 fclean: clean
-	/bin/rm -f $(NAME)
+	@/bin/rm -f $(NAME)
 
 re: fclean all

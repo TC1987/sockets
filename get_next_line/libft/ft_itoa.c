@@ -1,39 +1,41 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   ft_strjoin.c                                       :+:      :+:    :+:   */
+/*   ft_itoa.c                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2018/10/22 03:11:39 by tcho              #+#    #+#             */
-/*   Updated: 2018/11/09 20:08:13 by tcho             ###   ########.fr       */
+/*   Created: 2018/10/21 19:05:19 by tcho              #+#    #+#             */
+/*   Updated: 2018/11/09 01:01:09 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <string.h>
 #include <stdlib.h>
-#include "libft.h"
 
-char	*ft_strjoin(char const *s1, char const *s2)
+char	*ft_itoa(int n)
 {
-	char	*str;
+	int		negative;
 	int		i;
-	int		j;
+	int		temp;
+	char	*result;
 
-	i = 0;
-	j = 0;
-	if (!s1 || !s2)
-		return (NULL);
-	if (!(str = (char *)malloc(sizeof(char) * (ft_strlen(s1) +
-						ft_strlen(s2) + 1))))
-		return (NULL);
-	while (s1[i])
+	negative = n < 0 ? 1 : 0;
+	i = negative;
+	temp = n;
+	if (n == 0)
+		i = 1;
+	while (temp)
 	{
-		str[i] = s1[i];
+		temp /= 10;
 		i++;
 	}
-	while (s2[j])
-		str[i++] = s2[j++];
-	str[i] = '\0';
-	return (str);
+	if (!(result = (char *)malloc(sizeof(char) * (i + 1))))
+		return (NULL);
+	result[i] = '\0';
+	result[--i] = n < 0 ? -(n % 10) + '0' : (n % 10) + '0';
+	while (n /= 10)
+		result[--i] = n < 0 ? -(n % 10) + '0' : (n % 10) + '0';
+	if (negative)
+		result[--i] = '-';
+	return (result);
 }

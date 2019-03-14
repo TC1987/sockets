@@ -1,39 +1,31 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   ft_strjoin.c                                       :+:      :+:    :+:   */
+/*   ft_strchr.c                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2018/10/22 03:11:39 by tcho              #+#    #+#             */
-/*   Updated: 2018/11/09 20:08:13 by tcho             ###   ########.fr       */
+/*   Created: 2018/10/22 01:20:05 by tcho              #+#    #+#             */
+/*   Updated: 2018/11/05 20:30:09 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <string.h>
-#include <stdlib.h>
-#include "libft.h"
 
-char	*ft_strjoin(char const *s1, char const *s2)
+char	*ft_strchr(const char *s, int c)
 {
-	char	*str;
 	int		i;
-	int		j;
+	char	character;
 
 	i = 0;
-	j = 0;
-	if (!s1 || !s2)
-		return (NULL);
-	if (!(str = (char *)malloc(sizeof(char) * (ft_strlen(s1) +
-						ft_strlen(s2) + 1))))
-		return (NULL);
-	while (s1[i])
+	character = c;
+	while (s[i])
 	{
-		str[i] = s1[i];
+		if (s[i] == character)
+			return ((char *)(&s[i]));
 		i++;
 	}
-	while (s2[j])
-		str[i++] = s2[j++];
-	str[i] = '\0';
-	return (str);
+	if (s[i] == character)
+		return ((char *)(&s[i]));
+	return (NULL);
 }

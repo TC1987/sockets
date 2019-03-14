@@ -1,91 +1,77 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   get_next_line.c                                    :+:      :+:    :+:   */
+/*   main.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2018/11/04 18:31:19 by tcho              #+#    #+#             */
-/*   Updated: 2018/11/05 05:19:06 by tcho             ###   ########.fr       */
+/*   Created: 2019/03/12 00:15:44 by tcho              #+#    #+#             */
+/*   Updated: 2019/03/13 17:04:30 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <stdlib.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <sys/types.h>
-#include <string.h>
+#include <sys/uio.h>
+#include <unistd.h>
 #include "libft.h"
-#include "get_next_line.h"
 
-int	check_new_line(char *buffer, char **container, int fd, char **line)
+#define BUFF_SIZE 256
+
+int	ft_findindex(char *str, char c)
 {
-	int		index;
-	char	*temp;
+	int i;
 
-	if ((index = ft_strfind(buffer, '\n')) >= 0)
-	{
-		if (!container[fd])
-			container[fd] = ft_strnew(1);
-		temp = ft_strjoin(container[fd], buffer);
-		free(container[fd]);
-		container[fd] = temp;
-		return (find_next_line(container, fd, line));
-	}
-	else
-	{
-		if (container[fd])
-		{
-			temp = ft_strjoin(container[fd], buffer);
-			free(container[fd]);
-			container[fd] = temp;
-		}
-		else
-			container[fd] = ft_strdup(buffer);
-	}
-	return (0);
+	i = 0;
+	while (str[i] && (str[i] != c))
+		i++;
+	return ((str[i]) ? i : -1);
 }
 
-int	find_next_line(char **container, int fd, char **line)
+int	set_line(char **container, int fd, int bytes, char **line)
 {
-	int		index;
-	char	*temp;
+	int		newline_index;
+	char	*tmp;
 
-	index = ft_strfind(container[fd], '\n');
-	if (index == -1)
+	if (!&container[fd] || !container[fd])
+		return (0);
+	if (bytes >= 0)
 	{
-		*line = ft_strdup(container[fd]);
-		free(container[fd]);
-		container[fd] = NULL;
+		if ((newline_index = ft_findindex(container[fd], '\n')) == -1)
+		{
+			*line = ft_strdup(container[fd]);
+			free(container[fd]);
+			return (0);
+		}
+		*line = ft_strndup(container[fd], newline_index);
+		tmp = container[fd];
+		container[fd] = ft_strdup(container[fd] + newline_index + 1);
+		free(tmp);
+		return (1);
 	}
-	else
-	{
-		*line = ft_strsub(container[fd], 0, index);
-		temp = ft_strdup(container[fd] + index + 1);
-		free(container[fd]);
-		container[fd] = temp;
-	}
-	return (1);
+	return (-1);
 }
 
 int	get_next_line(const int fd, char **line)
 {
-	static char	*container[255];
+	static char	*container[256];
 	char		buffer[BUFF_SIZE + 1];
 	ssize_t		bytes;
+	char		*tmp;
 
 	if (fd < 0 || !line)
 		return (-1);
-	*line = NULL;
-	while ((bytes = read(fd, buffer, BUFF_SIZE)) > 0)
+	while ((bytes = read(fd, buffer, BUFF_SIZE)))
 	{
 		buffer[bytes] = '\0';
-		if (check_new_line(buffer, container, fd, line))
-			return (1);
+		if (!container[fd])
+			container[fd] = ft_strnew(1);
+		tmp = ft_strjoin(container[fd], buffer);
+		free(container[fd]);
+		container[fd] = tmp;
+		if (ft_strchr(buffer, '\n'))
+			break ;
 	}
-	if (bytes < 0)
-		return (-1);
-	if (container[fd] && container[fd][0] != '\0')
-		return (find_next_line(container, fd, line));
-	return (0);
+	return (set_line(container, fd, bytes, line));
 }

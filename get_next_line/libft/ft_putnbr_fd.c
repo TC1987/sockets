@@ -1,39 +1,34 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   ft_strjoin.c                                       :+:      :+:    :+:   */
+/*   ft_putnbr_fd.c                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2018/10/22 03:11:39 by tcho              #+#    #+#             */
-/*   Updated: 2018/11/09 20:08:13 by tcho             ###   ########.fr       */
+/*   Created: 2018/10/22 03:40:33 by tcho              #+#    #+#             */
+/*   Updated: 2018/11/09 16:40:31 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <string.h>
-#include <stdlib.h>
+#include <unistd.h>
 #include "libft.h"
 
-char	*ft_strjoin(char const *s1, char const *s2)
+void	ft_putnbr_fd(int n, int fd)
 {
-	char	*str;
-	int		i;
-	int		j;
+	char num;
 
-	i = 0;
-	j = 0;
-	if (!s1 || !s2)
-		return (NULL);
-	if (!(str = (char *)malloc(sizeof(char) * (ft_strlen(s1) +
-						ft_strlen(s2) + 1))))
-		return (NULL);
-	while (s1[i])
+	if (n == -2147483648)
+		write(fd, "-2147483648", 11);
+	else
 	{
-		str[i] = s1[i];
-		i++;
+		if (n < 0)
+		{
+			write(fd, "-", 1);
+			n = -n;
+		}
+		if (n > 9)
+			ft_putnbr_fd(n / 10, fd);
+		num = n % 10 + '0';
+		write(fd, &num, 1);
 	}
-	while (s2[j])
-		str[i++] = s2[j++];
-	str[i] = '\0';
-	return (str);
 }
