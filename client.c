@@ -6,7 +6,7 @@
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/03/13 19:24:09 by tcho              #+#    #+#             */
-/*   Updated: 2019/03/14 00:54:00 by tcho             ###   ########.fr       */
+/*   Updated: 2019/03/14 16:14:40 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,13 +29,13 @@ char	g_cwd[4096];
 
 void	prompt(void)
 {
-	printf("--------------------------------------------\n");
-	printf("-                                          -\n");
-	printf("-                FTP SERVER                -\n");
-	printf("-                                          -\n");
-	printf("--------------------------------------------\n\n");
+	printf("%s------------------------------------------------\n", YELLOW);
+	printf("-                                              -\n");
+	printf("-                FTP SERVER                    -\n");
+	printf("-                                              -\n");
+	printf("------------------------------------------------\n\n");
 	printf("Server Commands: ls cd pwd get put rm mkdir quit\n\n");
-	printf("Local Commands: lrm lcd lls lpwd lmkdir\n\n");
+	printf("Local Commands: lrm lcd lls lpwd lmkdir%s\n\n", RESET);
 }
 
 int		error(char *message, int code)
@@ -77,7 +77,7 @@ int		put_file(int sd, char *command)
 		return (display("Error: Directory, invalid file, or invalid permissions.", 1));
 	send(sd, buffer, 256, 0);
 	if (send_file_contents(sd, fd))
-		printf("Success: %s has finished uploading.\n", file);
+		printf("%sSuccess: %s has finished uploading.%s\n", GREEN, file, RESET);
 	return (1);
 }
 
@@ -90,7 +90,10 @@ void	read_file(char *file)
 	ft_memset(buffer, 0, sizeof(buffer));
 	fd = open(file, O_RDONLY);
 	while ((bytes = read(fd, buffer, sizeof(buffer) - 1)) > 0)
-		printf("%s", buffer);
+	{
+		printf("%s%s%s", GREEN, buffer, RESET);
+		fflush(stdout);
+	}
 	close(fd);
 }
 
@@ -107,7 +110,7 @@ void	write_file_contents(int sd, int file_size, char *file_name)
 	while (remaining > 0 && (nbytes = recv(sd, buffer, file_size, 0)) > 0)
 	{
 		if (!ft_strequ(file_name, ".tmp_ls"))
-			printf("%d / %d bytes received\n", nbytes, file_size);
+			printf("%s%d / %d bytes received%s\n", YELLOW, nbytes, file_size, RESET);
 		write(fd, buffer, nbytes);
 		remaining -= nbytes;
 	}
@@ -135,7 +138,7 @@ int		get_file(int sd, char *command)
 	send(sd, command, ft_strlen(command), 0);
 	file = ft_strrchr(command, ' ') + 1;
 	if (write_file(sd, file))
-		printf("Success: %s has downloaded.\n", file);
+		printf("%sSuccess: %s has downloaded.%s\n", GREEN, file, RESET);
 	return (1);
 }
 
@@ -166,7 +169,7 @@ int		get_pwd(int sd, char *command)
 		send(sd, command, ft_strlen(command), 0);
 		rec_bytes = recv(sd, buffer, sizeof(buffer), 0);
 		buffer[rec_bytes] = '\0';
-		printf("%s\n", buffer);
+		printf("%s%s%s\n", CYAN, buffer, RESET);
 	}
 	return (1);
 }
@@ -182,7 +185,7 @@ int		do_lrm(char *command)
 		file = ft_strrchr(command, ' ') + 1;
 		if (!error_check_return(unlink(file), "lrm"))
 			return (1);
-		printf("Success: %s has been removed\n", file);
+		printf("%sSuccess: %s has been removed%s\n", GREEN, file, RESET);
 	}
 	return (1);
 }
@@ -203,7 +206,7 @@ int		do_lcd(char *command)
 		{
 			cwd = getcwd(NULL, 0);
 			ft_strcpy(g_cwd, cwd);
-			printf("%s\n", g_cwd);
+			printf("%s%s%s\n", CYAN, g_cwd, RESET);
 			free(cwd);
 		}
 	}
@@ -236,7 +239,7 @@ int		do_lpwd(char *command)
 	else
 	{
 		cwd = getcwd(NULL, 0);
-		printf("%s\n", cwd);
+		printf("%s%s%s\n", CYAN, cwd, RESET);
 		free(cwd);
 	}
 	return (1);
@@ -276,7 +279,7 @@ int		do_cd_rm_mkdir(int sd, char *command)
 		send(sd, command, ft_strlen(command), 0);
 		bytes_received = recv(sd, g_message, sizeof(g_message), 0);
 		g_message[bytes_received] = '\0';
-		printf("%s\n", g_message);
+		printf("%s%s%s\n", CYAN, g_message, RESET);
 	}
 	free_list(args);
 	return (1);
@@ -359,9 +362,9 @@ void	handle_requests(int sd)
 		if (ft_strequ(command, ""))
 			continue;
 		else if (check_command(command) == 0)
-			printf("Error: Not a valid command.\n");
+			printf("%sError: Not a valid command.%s\n", RED, RESET);
 		else if (ft_strchr(command, '/') != NULL)
-			printf("Error: Command cannot contain any slashes.\n");
+			printf("%sError: Command cannot contain any slashes.%s\n", RED, RESET);
 		else
 			keep_alive = do_op(sd, command);
 	}

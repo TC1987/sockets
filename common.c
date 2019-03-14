@@ -6,7 +6,7 @@
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/02/28 03:27:28 by tcho              #+#    #+#             */
-/*   Updated: 2019/03/14 00:58:43 by tcho             ###   ########.fr       */
+/*   Updated: 2019/03/14 16:13:46 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -92,7 +92,7 @@ int		send_file_contents(int sd, int fd)
 	while (file_size > 0 && \
 			(nbytes = send(sd, file_ptr, fd_info.st_size, 0)) != -1)
 	{
-		printf("%d / %lld bytes sent\n", nbytes, fd_info.st_size);
+		printf("%s%d / %lld bytes sent%s\n", YELLOW, nbytes, fd_info.st_size, RESET);
 		file_ptr += nbytes;
 		file_size -= nbytes;
 	}

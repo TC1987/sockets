@@ -6,7 +6,7 @@
 #    By: tcho <marvin@42.fr>                        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2019/02/17 23:47:20 by tcho              #+#    #+#              #
-#    Updated: 2019/03/14 00:51:05 by tcho             ###   ########.fr        #
+#    Updated: 2019/03/14 15:27:04 by tcho             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -26,7 +26,7 @@ SANITIZE = -fsanitize=address
 
 all: $(NAME)
 
-$(NAME):
+$(NAME): $(COMMON_SRC) $(CLIENT_SRC) $(SERVER_SRC)
 	make -C ./libft
 	$(CC) $(CLIENT_SRC) $(COMMON_SRC) $(INCLUDE) $(LIB) -o $(CLIENT_EXE)
 	$(CC) $(SERVER_SRC) $(COMMON_SRC) $(INCLUDE) $(LIB) -o $(SERVER_EXE)
@@ -40,3 +40,5 @@ fclean:
 	make fclean -C ./libft
 
 re: fclean all
+
+.PHONY: all $(NAME)
