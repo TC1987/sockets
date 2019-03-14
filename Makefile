@@ -6,7 +6,7 @@
 #    By: tcho <marvin@42.fr>                        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2019/02/17 23:47:20 by tcho              #+#    #+#              #
-#    Updated: 2019/03/13 21:21:37 by tcho             ###   ########.fr        #
+#    Updated: 2019/03/13 23:57:26 by tcho             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -28,8 +28,8 @@ SANITIZE = -fsanitize=address
 all: $(NAME)
 
 $(NAME): $(CLIENT_SRC) $(SERVER_SRC) $(LIBFT)
-	$(CC) $(CLIENT_SRC) $(COMMON_SRC) $(GNL) $(INCLUDE) $(LIB) -o $(CLIENT_EXE) $(SANITIZE) -g
-	$(CC) $(SERVER_SRC) $(COMMON_SRC) $(GNL) $(INCLUDE) $(LIB) -o $(SERVER_EXE) $(SANITIZE) -g
+	$(CC) $(CLIENT_SRC) $(COMMON_SRC) $(GNL) $(INCLUDE) $(LIB) -o $(CLIENT_EXE)
+	$(CC) $(SERVER_SRC) $(COMMON_SRC) $(GNL) $(INCLUDE) $(LIB) -o $(SERVER_EXE)
 
 $(LIBFT):
 	make -C ./libft
