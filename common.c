@@ -6,7 +6,7 @@
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/02/28 03:27:28 by tcho              #+#    #+#             */
-/*   Updated: 2019/03/14 00:27:26 by tcho             ###   ########.fr       */
+/*   Updated: 2019/03/14 00:58:43 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,7 @@ void	free_list(char **list)
 	char **head;
 
 	if (!list || !(*list))
-		return;
+		return ;
 	head = list;
 	while (*head)
 	{

@@ -6,7 +6,7 @@
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/03/13 19:24:09 by tcho              #+#    #+#             */
-/*   Updated: 2019/03/14 00:31:51 by tcho             ###   ########.fr       */
+/*   Updated: 2019/03/14 00:54:00 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -77,7 +77,7 @@ int		put_file(int sd, char *command)
 		return (display("Error: Directory, invalid file, or invalid permissions.", 1));
 	send(sd, buffer, 256, 0);
 	if (send_file_contents(sd, fd))
-		printf("%s has finished uploading.\n", file);
+		printf("Success: %s has finished uploading.\n", file);
 	return (1);
 }
 
@@ -135,7 +135,7 @@ int		get_file(int sd, char *command)
 	send(sd, command, ft_strlen(command), 0);
 	file = ft_strrchr(command, ' ') + 1;
 	if (write_file(sd, file))
-		printf("%s has successfully downloaded.\n", file);
+		printf("Success: %s has downloaded.\n", file);
 	return (1);
 }
 
@@ -182,7 +182,7 @@ int		do_lrm(char *command)
 		file = ft_strrchr(command, ' ') + 1;
 		if (!error_check_return(unlink(file), "lrm"))
 			return (1);
-		printf("success: %s has been removed\n", file);
+		printf("Success: %s has been removed\n", file);
 	}
 	return (1);
 }

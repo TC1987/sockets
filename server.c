@@ -6,7 +6,7 @@
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/03/13 19:31:26 by tcho              #+#    #+#             */
-/*   Updated: 2019/03/14 00:33:07 by tcho             ###   ########.fr       */
+/*   Updated: 2019/03/14 00:57:20 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,7 +48,7 @@ int		get_file(int sd, char *command)
 		remaining -= nbytes;
 	}
 	close(fd);
-	printf("%s has successfully downloaded.\n", ft_strchr(command, ' ') + 1);
+	printf("Success: %s has downloaded.\n", ft_strchr(command, ' ') + 1);
 	free(buffer);
 	return (1);
 }
@@ -97,7 +97,7 @@ int		send_file(int sd, char *command)
 	file = ft_strrchr(command, ' ') + 1;
 	fd = open(file, O_RDONLY);
 	if (send_file_contents(sd, fd))
-		printf("%s has been successfully sent.\n", file);
+		printf("Success: %s has been sent.\n", file);
 	return (1);
 }
 
@@ -136,7 +136,8 @@ int		do_rm(int sd, char *command)
 		ft_strcpy(g_message, "Error: Directory, invalid file, or invalid permissions.");
 	else
 	{
-		ft_strcpy(g_message, file);
+		ft_strcpy(g_message, "Success: ");
+		ft_strcat(g_message, file);
 		ft_strcat(g_message, " has been successfully removed.");
 	}
 	send(sd, g_message, sizeof(g_message), 0);
@@ -148,11 +149,18 @@ int		do_mkdir(int sd, char *command)
 	char *dir;
 
 	dir = ft_strrchr(command, ' ') + 1;
-	ft_strcpy(g_message, dir);
 	if (mkdir(dir, 0777) == -1)
+	{
+		ft_strcpy(g_message, "Error: ");
+		ft_strcat(g_message, dir);
 		ft_strcat(g_message, " already exists.");
+	}
 	else
+	{
+		ft_strcpy(g_message, "Success: ");
+		ft_strcat(g_message, dir);
 		ft_strcat(g_message, " has been successfully created.");
+	}
 	send(sd, g_message, sizeof(g_message), 0);
 	return (1);
 }
@@ -195,7 +203,7 @@ int		create_socket(char *port)
 	error_check(bind(sd, (struct sockaddr *)&address,
 				sizeof(address)), "bind");
 	error_check(listen(sd, 5), "listen");
-	printf("listening on port %s\n", port);
+	printf("Listening on port %s\n", port);
 	return (sd);
 }
 
