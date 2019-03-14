@@ -6,7 +6,7 @@
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/03/13 19:24:09 by tcho              #+#    #+#             */
-/*   Updated: 2019/03/13 21:29:40 by tcho             ###   ########.fr       */
+/*   Updated: 2019/03/14 00:31:51 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,6 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include "libft.h"
-#include "get_next_line.h"
 #include "common.h"
 
 #define SIZE 256
@@ -75,7 +74,7 @@ int		put_file(int sd, char *command)
 		return (display("usage: put [file_name]", 1));
 	file = ft_strrchr(buffer, ' ') + 1;
 	if ((fd = open(file, O_RDONLY)) == -1)
-		return (display("File not found or invalid permissions.", 1));
+		return (display("Error: Directory, invalid file, or invalid permissions.", 1));
 	send(sd, buffer, 256, 0);
 	if (send_file_contents(sd, fd))
 		printf("%s has finished uploading.\n", file);
@@ -122,7 +121,7 @@ int		write_file(int sd, char *file_name)
 
 	recv(sd, &file_size, sizeof(file_size), 0);
 	if (file_size == -1)
-		return (display("File not found or invalid permissions.", 0));
+		return (display("Error: Directory, invalid file, or invalid permissions.", 0));
 	write_file_contents(sd, file_size, file_name);
 	return (1);
 }
@@ -337,17 +336,26 @@ int		create_and_connect(char *ip_address, char *port)
 	return (sd);
 }
 
+void	get_input(char *command)
+{
+	int bytes;
+
+	bytes = read(0, command, 256);
+	if (bytes)
+		command[bytes - 1] = '\0';
+}
+
 void	handle_requests(int sd)
 {
 	int		keep_alive;
-	char	*command;
+	char	command[256];
 
 	keep_alive = 1;
 	prompt();
 	while (keep_alive)
 	{
 		ft_putstr(">> ");
-		get_next_line(0, &command);
+		get_input(command);
 		if (ft_strequ(command, ""))
 			continue;
 		else if (check_command(command) == 0)
@@ -356,7 +364,6 @@ void	handle_requests(int sd)
 			printf("Error: Command cannot contain any slashes.\n");
 		else
 			keep_alive = do_op(sd, command);
-		free(command);
 	}
 }
 

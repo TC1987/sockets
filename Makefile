@@ -6,7 +6,7 @@
 #    By: tcho <marvin@42.fr>                        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2019/02/17 23:47:20 by tcho              #+#    #+#              #
-#    Updated: 2019/03/13 23:57:26 by tcho             ###   ########.fr        #
+#    Updated: 2019/03/14 00:51:05 by tcho             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,22 +17,19 @@ COMMON = common
 CLIENT_SRC = $(addsuffix .c, $(CLIENT))
 SERVER_SRC = $(addsuffix .c, $(SERVER))
 COMMON_SRC = $(addsuffix .c, $(COMMON))
-CLIENT_EXE = c
-SERVER_EXE = s
-INCLUDE = -I. -I./get_next_line -I./libft
+CLIENT_EXE = client
+SERVER_EXE = server
+INCLUDE = -I. -I ./libft
 LIB = -L./libft -lft
-GNL = ./get_next_line/get_next_line.c
 CC = gcc -Wall -Wextra -Werror
 SANITIZE = -fsanitize=address
 
 all: $(NAME)
 
-$(NAME): $(CLIENT_SRC) $(SERVER_SRC) $(LIBFT)
-	$(CC) $(CLIENT_SRC) $(COMMON_SRC) $(GNL) $(INCLUDE) $(LIB) -o $(CLIENT_EXE)
-	$(CC) $(SERVER_SRC) $(COMMON_SRC) $(GNL) $(INCLUDE) $(LIB) -o $(SERVER_EXE)
-
-$(LIBFT):
+$(NAME):
 	make -C ./libft
+	$(CC) $(CLIENT_SRC) $(COMMON_SRC) $(INCLUDE) $(LIB) -o $(CLIENT_EXE)
+	$(CC) $(SERVER_SRC) $(COMMON_SRC) $(INCLUDE) $(LIB) -o $(SERVER_EXE)
 
 clean:
 	make clean -C ./libft

@@ -6,7 +6,7 @@
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/02/28 03:27:28 by tcho              #+#    #+#             */
-/*   Updated: 2019/03/13 21:18:23 by tcho             ###   ########.fr       */
+/*   Updated: 2019/03/14 00:27:26 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -86,11 +86,6 @@ int		send_file_contents(int sd, int fd)
 	if (!check_file(sd, fd, fd_info))
 		return (display("Uploads are restricted to regular files.", 0));
 	file_size = fd_info.st_size;
-
-
-	printf("fd_info: %lld     file_size: %d\n", fd_info.st_size, file_size);
-
-
 	send(sd, &file_size, sizeof(int), 0);
 	file_ptr = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
 	head = file_ptr;

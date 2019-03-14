@@ -6,7 +6,7 @@
 /*   By: tcho <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/03/13 19:31:26 by tcho              #+#    #+#             */
-/*   Updated: 2019/03/13 21:48:25 by tcho             ###   ########.fr       */
+/*   Updated: 2019/03/14 00:33:07 by tcho             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -133,7 +133,7 @@ int		do_rm(int sd, char *command)
 
 	file = ft_strrchr(command, ' ') + 1;
 	if (unlink(file) == -1)
-		ft_strcpy(g_message, "Invalid file or permissions.");
+		ft_strcpy(g_message, "Error: Directory, invalid file, or invalid permissions.");
 	else
 	{
 		ft_strcpy(g_message, file);
@@ -148,16 +148,11 @@ int		do_mkdir(int sd, char *command)
 	char *dir;
 
 	dir = ft_strrchr(command, ' ') + 1;
+	ft_strcpy(g_message, dir);
 	if (mkdir(dir, 0777) == -1)
-	{
-		ft_strcpy(g_message, dir);
 		ft_strcat(g_message, " already exists.");
-	}
 	else
-	{
-		ft_strcpy(g_message, dir);
 		ft_strcat(g_message, " has been successfully created.");
-	}
 	send(sd, g_message, sizeof(g_message), 0);
 	return (1);
 }
